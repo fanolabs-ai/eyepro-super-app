@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EyePro Super App</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --navy: #004687; --navy-dark: #003366; --navy-light: #0057a8;
+    --gold: #c49d29; --gold-light: #d4af37;
+    --cream: #FAF9F6; --white: #ffffff;
+    --gray-50: #f8f8f6; --gray-100: #f0efe9; --gray-200: #e2e1db;
+    --gray-300: #c8c7bf; --gray-500: #8a8980; --gray-700: #4a4940; --gray-900: #1a1910;
+    --danger: #c0392b; --success: #1a7a4a;
+    --border-radius: 6px;
+    --shadow-sm: 0 1px 3px rgba(0,70,135,0.08);
+    --shadow-md: 0 4px 16px rgba(0,70,135,0.12);
+    --shadow-lg: 0 8px 32px rgba(0,70,135,0.16);
+    --transition: all 0.2s ease;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--gray-900); min-height: 100vh; font-size: 13px; }
+
+  /* ===== APP SHELL ===== */
+  #app { display: none; }
+  #app.active { display: flex; min-height: 100vh; }
+
+  header {
+    background: var(--navy); padding: 0 24px; display: flex; align-items: center;
+    justify-content: space-between; height: 60px; box-shadow: var(--shadow-md);
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo img { height: 36px; }
+  .logo-text { font-family: 'Playfair Display', serif; color: var(--white); font-size: 19px; font-weight: 700; letter-spacing: 0.5px; }
+  .logo-sub { color: var(--gold); font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; display: block; margin-top: -3px; }
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .role-chip { background: var(--gold); color: var(--white); padding: 3px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; }
+  .user-name { color: var(--white); font-size: 12px; font-weight: 500; }
+
+  nav.sidebar {
+    position: fixed; top: 60px; bottom: 0; left: 0; width: 200px; background: var(--navy-dark);
+    padding: 16px 0; overflow-y: auto; z-index: 150;
+  }
+  nav.sidebar button {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 22px; background: none;
+    border: none; color: #cfe0f2; font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600;
+    text-align: left; cursor: pointer; border-left: 3px solid transparent; transition: var(--transition);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  nav.sidebar button:hover { background: rgba(255,255,255,0.06); color: var(--white); }
+  nav.sidebar button.active { background: rgba(255,255,255,0.08); color: var(--gold); border-left-color: var(--gold); }
+  nav.sidebar button .ic { font-size: 15px; width: 18px; text-align: center; }
+  nav.sidebar .nav-sep { height: 1px; background: rgba(255,255,255,0.08); margin: 10px 20px; }
+  nav.sidebar button.logout-btn { color: #f0a89f; margin-top: 6px; }
+
+  main.content { margin-left: 200px; margin-top: 60px; flex: 1; min-height: calc(100vh - 60px); }
+
+  .view { display: none; padding: 24px 32px; }
+  .view.active { display: block; }
+
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid var(--gold); flex-wrap: wrap; gap: 10px; }
+  .page-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--navy); font-weight: 700; }
+  .page-subtitle { font-size: 11px; color: var(--gray-500); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: var(--border-radius); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; transition: var(--transition); text-transform: uppercase; letter-spacing: 0.5px; }
+  .btn-primary { background: var(--navy); color: var(--white); }
+  .btn-primary:hover { background: var(--navy-light); }
+  .btn-gold { background: var(--gold); color: var(--white); }
+  .btn-gold:hover { background: var(--gold-light); }
+  .btn-outline { background: transparent; color: var(--navy); border: 1.5px solid var(--navy); }
+  .btn-outline:hover { background: var(--navy); color: var(--white); }
+  .btn-danger { background: var(--danger); color: var(--white); }
+  .btn-danger:hover { background: #a93226; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+  .search-bar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+  .search-input, select, input, textarea { padding: 8px 12px; border: 1.5px solid var(--gray-200); border-radius: var(--border-radius); background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 12.5px; color: var(--gray-900); transition: var(--transition); }
+  .search-input { width: 220px; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,70,135,0.08); }
+  input[readonly], input:disabled { background: var(--gray-100); color: var(--gray-500); }
+  label { font-size: 11px; font-weight: 600; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.5px; display:block; margin-bottom: 3px; }
+
+  .table-wrap { background: var(--white); border-radius: 10px; box-shadow: var(--shadow-sm); overflow: auto; border: 1px solid var(--gray-200); }
+  table.records-table { width: 100%; border-collapse: collapse; }
+  .records-table th { background: var(--navy); color: var(--white); padding: 10px 12px; text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; white-space: nowrap; position: sticky; top: 0; }
+  .records-table td { padding: 9px 12px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; font-size: 12px; white-space: nowrap; }
+  .records-table tr:last-child td { border-bottom: none; }
+  .records-table tr:hover td { background: #f0f5fc; }
+  .record-actions { display: flex; gap: 5px; }
+
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; background: var(--navy); color: var(--white); letter-spacing: 0.5px; }
+  .badge.scheduled { background: var(--gray-500); }
+  .badge.checked_in { background: var(--gold); }
+  .badge.exam_done { background: var(--navy-light); }
+  .badge.invoiced { background: var(--success); }
+  .badge.cancelled { background: var(--danger); }
+  .badge.paid { background: var(--success); }
+  .badge.partial { background: var(--gold); }
+  .badge.pending { background: var(--danger); }
+  .badge.quotation { background: var(--gray-700); }
+  .badge.order { background: var(--navy-light); }
+  .badge.vat_invoice { background: var(--success); }
+  .badge.delivered-yes { background: var(--success); }
+  .badge.delivered-no { background: var(--gray-500); }
+
+  .btn-doc-quotation { background: #6b7280; color: var(--white); }
+  .btn-doc-quotation:hover { background: #4b5563; }
+  .btn-doc-order { background: var(--gold); color: var(--white); }
+  .btn-doc-order:hover { background: var(--gold-light); }
+  .btn-doc-vat { background: var(--success); color: var(--white); }
+  .btn-doc-vat:hover { background: #145c38; }
+  .btn-settle { background: var(--success); color: var(--white); }
+  .btn-settle:hover { background: #145c38; }
+
+  /* Autocomplete (patient / inventory search) */
+  .ac-wrap { position: relative; }
+  .autocomplete-results { display:none; position:absolute; top:100%; left:0; right:0; background:var(--white); border:1.5px solid var(--navy); border-top:none; border-radius:0 0 6px 6px; max-height:220px; overflow-y:auto; z-index:500; box-shadow: var(--shadow-md); }
+  .ac-item { padding:7px 10px; font-size:12px; cursor:pointer; border-bottom:1px solid var(--gray-100); }
+  .ac-item:last-child { border-bottom:none; }
+  .ac-item:hover { background: #f0f5fc; }
+  .ac-item .ac-sub { display:block; font-size:10.5px; color: var(--gray-500); margin-top:1px; }
+  .ac-empty { padding:8px 10px; font-size:11.5px; color: var(--gray-500); font-style:italic; }
+
+  /* Nav badge (outstanding count) */
+  nav.sidebar button { position: relative; }
+  .nav-badge { background: var(--danger); color: var(--white); font-size: 9.5px; font-weight: 700; border-radius: 20px; padding: 1px 6px; margin-left: auto; }
+
+  /* Outstanding highlight */
+  .outstanding-amt { color: var(--danger); font-weight: 700; }
+
+  .card { background: var(--white); border-radius: 10px; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); padding: 20px 24px; margin-bottom: 18px; }
+  .form-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 140px; }
+  .form-group.narrow { max-width: 110px; min-width: 90px; }
+  .form-group.full { flex: 1 1 100%; }
+  fieldset { border: 1.5px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px; padding: 14px 18px; }
+  legend { font-family: 'Playfair Display', serif; color: var(--navy); font-size: 13px; font-weight: 700; padding: 0 8px; }
+
+  .stats-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px; padding: 14px 20px; flex: 1; min-width: 150px; box-shadow: var(--shadow-sm); }
+  .stat-number { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--navy); font-weight: 700; }
+  .stat-label { font-size: 10px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px; }
+  .gold-bar { height: 3px; background: var(--gold); border-radius: 2px; margin-top: 8px; width: 40px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: var(--white); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 26px 30px; max-width: 460px; width: 92%; max-height: 88vh; overflow-y: auto; }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--navy); margin-bottom: 14px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--navy); color: var(--white); padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 9999; transform: translateY(80px); opacity: 0; transition: all 0.3s ease; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--gray-500); }
+  .empty-state h3 { font-family: 'Playfair Display', serif; color: var(--navy); margin-bottom: 6px; }
+
+  .locked-note { font-size: 11px; color: var(--gray-500); font-style: italic; }
+
+  /* Login screen */
+  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--cream); }
+  .login-box { background: var(--white); padding: 36px 40px; border-radius: 14px; box-shadow: var(--shadow-lg); width: 380px; border-top: 6px solid var(--gold); text-align: center; }
+  .login-box img { height: 56px; margin-bottom: 6px; }
+  .login-box h1 { font-family: 'Playfair Display', serif; color: var(--navy); font-size: 20px; margin-bottom: 2px; }
+  .login-box .sub { color: var(--gray-500); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 22px; }
+  .login-box .form-group { text-align: left; margin-bottom: 12px; }
+  .login-tabs { display: flex; margin-bottom: 18px; border-bottom: 1.5px solid var(--gray-200); }
+  .login-tabs button { flex: 1; background: none; border: none; padding: 8px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--gray-500); cursor: pointer; border-bottom: 2px solid transparent; }
+  .login-tabs button.active { color: var(--navy); border-bottom-color: var(--gold); }
+
+  /* Invoice builder */
+  .item-row { display: grid; grid-template-columns: 1.6fr 0.9fr 0.85fr 0.55fr 0.9fr 0.9fr 1.1fr 0.9fr 28px; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--gray-100); }
+  .item-row.header-row { font-size: 9.5px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 2px solid var(--gold); }
+  .item-row input, .item-row select { width: 100%; padding: 5px 6px; font-size: 11.5px; }
+  .items-scroll { overflow-x: auto; }
+  .items-scroll .item-row, .items-scroll .item-row.header-row { min-width: 920px; }
+
+  /* Printed order/quotation/invoice header */
+  .inv-print-head { text-align: center; margin-bottom: 10px; }
+  .inv-print-head img { height: 56px; display:block; margin: 0 auto 4px; }
+  .inv-print-head .company { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--navy); font-weight: 700; }
+  .inv-print-head .tagline { font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-top: -2px; }
+  .inv-print-head .co-name { font-size: 12px; font-weight: 600; margin-top: 4px; }
+  .inv-print-head .co-contact { font-size: 11px; color: var(--gray-700); }
+  .inv-doc-title { text-align: center; font-family: 'Playfair Display', serif; font-size: 20px; color: var(--navy); font-weight: 700; text-decoration: underline; text-transform: uppercase; margin: 12px 0; letter-spacing: 2px; }
+  .inv-line { font-size: 12.5px; margin: 4px 0; display:flex; gap: 28px; }
+  .inv-line span.field { display:inline-block; }
+  .inv-blank { display:inline-block; border-bottom: 1px solid var(--gray-900); min-width: 130px; }
+  .totals-box { max-width: 320px; margin-left: auto; margin-top: 14px; }
+  .totals-box .trow { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .totals-box .trow.grand { font-weight: 700; font-size: 16px; color: var(--navy); border-top: 2px solid var(--gold); margin-top: 6px; padding-top: 8px; }
+
+  /* Printable invoice */
+  #print-area { display: none; }
+  @media print {
+    header, nav.sidebar, .page-header .btn, .search-bar, .record-actions, .no-print { display: none !important; }
+    main.content { margin: 0 !important; }
+    body * { visibility: hidden; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 10px 16px; }
+  }
+  @page.a4-portrait, #print-area.size-a4 { }
+  @media print {
+    #print-area.size-a4 { width: 190mm; }
+    #print-area.size-a5 { width: 138mm; font-size: 11px; }
+  }
+  table.inv-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
+  .inv-table th { background: var(--navy); color: white; padding: 5px 8px; font-size: 10.5px; text-align: left; }
+  .inv-table td { padding: 5px 8px; border-bottom: 1px solid var(--gray-200); font-size: 11.5px; word-wrap: break-word; }
+  table.inv-summary { width: 60%; margin-left: auto; border-collapse: collapse; margin-bottom: 14px; }
+  .inv-summary th { background: var(--cream); color: var(--navy); border: 1px solid var(--gray-300); padding: 6px 10px; font-size: 11px; text-align: center; }
+  .inv-summary td { border: 1px solid var(--gray-300); padding: 6px 10px; font-size: 12.5px; text-align: center; font-weight: 700; color: var(--navy); }
+  .inv-paid-status { text-align: right; font-size: 13px; margin-top: 6px; }
+  .inv-paid-full { text-align: center; font-family: 'Playfair Display', serif; font-weight: 700; color: var(--success); font-size: 16px; border: 2px solid var(--success); display: inline-block; padding: 4px 18px; border-radius: 6px; margin-top: 6px; }
+
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <img src="logo.png" alt="EyePro logo">
+    <h1>EyePro Super App</h1>
+    <div class="sub">Adams Vision Ltd</div>
+    <div class="login-tabs">
+      <button id="tab-login-btn" class="active" onclick="switchAuthTab('login')">Log In</button>
+      <button id="tab-signup-btn" onclick="switchAuthTab('signup')">New Account</button>
+    </div>
+    <div id="login-form">
+      <div class="form-group"><label>Email</label><input type="text" id="login-email" style="width:100%"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-password" style="width:100%"></div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px" onclick="doLogin()">Log In</button>
+    </div>
+    <div id="signup-form" style="display:none">
+      <div class="form-group"><label>Full Name</label><input type="text" id="signup-name" style="width:100%"></div>
+      <div class="form-group"><label>Email</label><input type="text" id="signup-email" style="width:100%"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="signup-password" style="width:100%"></div>
+      <button class="btn btn-gold" style="width:100%; justify-content:center; margin-top:8px" onclick="doSignup()">Create Account</button>
+      <p class="locked-note" style="margin-top:10px">New accounts start as Secretary. Ask the optometrist to upgrade your role in Supabase if needed.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app">
+  <header>
+    <div class="logo">
+      <img src="logo.png" alt="EyePro logo">
+      <div><span class="logo-text">EyePro</span><span class="logo-sub">Super App</span></div>
+    </div>
+    <div class="header-right">
+      <span class="user-name" id="hdr-username"></span>
+      <span class="role-chip" id="hdr-role"></span>
+    </div>
+  </header>
+
+  <nav class="sidebar" id="sidebar">
+    <button data-view="dashboard" onclick="showView('dashboard')"><span class="ic">&#9673;</span>Dashboard</button>
+    <button data-view="appointments" onclick="showView('appointments')"><span class="ic">&#128197;</span>Appointments</button>
+    <button data-view="patients" onclick="showView('patients')"><span class="ic">&#128100;</span>Patients</button>
+    <button data-view="inventory" onclick="showView('inventory')"><span class="ic">&#128230;</span>Inventory</button>
+    <button data-view="invoicing" onclick="showView('invoicing')"><span class="ic">&#128179;</span>Invoicing<span class="nav-badge" id="nav-outstanding-badge" style="display:none"></span></button>
+    <div class="nav-sep" data-role="optometrist"></div>
+    <button data-view="reports" data-role="optometrist" onclick="showView('reports')"><span class="ic">&#128202;</span>Reports</button>
+    <div class="nav-sep"></div>
+    <button class="logout-btn" onclick="doLogout()"><span class="ic">&#8630;</span>Log Out</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <section class="view" id="view-dashboard">
+      <div class="page-header">
+        <div><div class="page-title">Dashboard</div><div class="page-subtitle" id="dash-date"></div></div>
+      </div>
+      <div class="stats-row" id="dash-stats"></div>
+      <div class="card" id="dash-outstanding-card" style="display:none">
+        <div class="page-header" style="border:none; margin-bottom:10px; padding-bottom:0">
+          <div class="page-subtitle" style="font-size:13px; text-transform:none; color:var(--danger); font-weight:700">&#9888; Outstanding Balances</div>
+          <button class="btn btn-outline btn-sm" onclick="showView('invoicing'); document.getElementById('invoice-outstanding-only').checked=true; renderInvoices();">View All</button>
+        </div>
+        <div class="table-wrap"><table class="records-table">
+          <thead><tr><th>Invoice #</th><th>Type</th><th>Client</th><th>Outstanding (Rs)</th><th>Actions</th></tr></thead>
+          <tbody id="dash-outstanding-tbody"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="page-subtitle" style="margin-bottom:10px">Today's Appointments</div>
+        <div class="table-wrap"><table class="records-table"><thead><tr><th>Time</th><th>Patient</th><th>Purpose</th><th>Status</th></tr></thead><tbody id="dash-today-appts"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ===================== APPOINTMENTS ===================== -->
+    <section class="view" id="view-appointments">
+      <div class="page-header">
+        <div><div class="page-title">Appointments</div><div class="page-subtitle">Agenda &amp; Visit Tracking</div></div>
+        <button class="btn btn-gold" onclick="openAppointmentModal()">+ New Appointment</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="appt-search" placeholder="Search name or phone" oninput="renderAppointments()">
+        <input type="date" id="appt-date-filter" onchange="renderAppointments()">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('appt-date-filter').value='';renderAppointments()">Clear Date</button>
+      </div>
+      <div class="table-wrap"><table class="records-table">
+        <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Contact</th><th>Purpose</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="appt-tbody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ===================== PATIENTS ===================== -->
+    <section class="view" id="view-patients">
+      <div class="page-header">
+        <div><div class="page-title">Patient Records</div><div class="page-subtitle">Demographics &amp; Clinical History</div></div>
+        <button class="btn btn-gold" onclick="openPatientModal()">+ New Patient</button>
+      </div>
+      <div class="search-bar"><input type="text" class="search-input" id="patient-search" placeholder="Search name, code or phone" oninput="renderPatients()"></div>
+      <div class="table-wrap"><table class="records-table">
+        <thead><tr><th>Code</th><th>Name</th><th>DOB / Age</th><th>Contact</th><th>Occupation</th><th>Actions</th></tr></thead>
+        <tbody id="patient-tbody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ===================== INVENTORY ===================== -->
+    <section class="view" id="view-inventory">
+      <div class="page-header">
+        <div><div class="page-title">Inventory</div><div class="page-subtitle">Frames &middot; Contact Lenses &middot; Accessories</div></div>
+        <button class="btn btn-gold" id="inv-add-btn" onclick="openInventoryModal()">+ Add Item</button>
+      </div>
+      <p class="locked-note" id="inv-secretary-note" style="display:none; margin-bottom:10px">Cost price is visible to the optometrist only. You can see selling prices and stock levels.</p>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="inv-search" placeholder="Search code, description, colour" oninput="renderInventory()">
+        <select id="inv-type-filter" onchange="renderInventory()">
+          <option value="">All Types</option><option value="frame">Frames</option><option value="contact_lens">Contact Lenses</option><option value="accessory">Accessories</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table class="records-table">
+        <thead><tr id="inv-thead-row"><th>Local Code</th><th>Type</th><th>Description</th><th>Size/Colour</th><th>Cost</th><th>Selling Price</th><th>Stock</th><th>Sold</th><th>Actions</th></tr></thead>
+        <tbody id="inv-tbody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ===================== INVOICING ===================== -->
+    <section class="view" id="view-invoicing">
+      <div class="page-header">
+        <div><div class="page-title">Invoicing</div><div class="page-subtitle">Quotation &middot; Order &middot; VAT Invoice</div></div>
+        <div style="display:flex; gap:10px">
+          <button class="btn btn-doc-quotation" onclick="openInvoiceBuilder('quotation')">+ Quotation</button>
+          <button class="btn btn-doc-order" onclick="openInvoiceBuilder('order')">+ Order</button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="invoice-search" placeholder="Search client or invoice #" oninput="renderInvoices()">
+        <div class="form-group narrow" style="min-width:130px"><label style="margin-bottom:0">From</label><input type="date" id="invoice-date-from" onchange="renderInvoices()"></div>
+        <div class="form-group narrow" style="min-width:130px"><label style="margin-bottom:0">To</label><input type="date" id="invoice-date-to" onchange="renderInvoices()"></div>
+        <select id="invoice-type-filter" onchange="renderInvoices()">
+          <option value="">All Types</option><option value="quotation">Quotation</option><option value="order">Order</option><option value="vat_invoice">VAT Invoice</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:6px; text-transform:none; font-weight:600; font-size:12px; color:var(--gray-900)">
+          <input type="checkbox" id="invoice-outstanding-only" onchange="renderInvoices()" style="width:auto"> Outstanding only
+        </label>
+        <button class="btn btn-outline btn-sm" onclick="clearInvoiceFilters()">Clear Filters</button>
+      </div>
+      <div class="table-wrap"><table class="records-table">
+        <thead><tr><th>Invoice #</th><th>Order #</th><th>Type</th><th>Date</th><th>Client</th><th>Grand Total (Rs)</th><th>Outstanding (Rs)</th><th>Delivered</th><th>Actions</th></tr></thead>
+        <tbody id="invoice-tbody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ===================== PAYMENT TIMELINE ===================== -->
+    <section class="view" id="view-payment-timeline">
+      <div class="page-header">
+        <div><div class="page-title">Payment Timeline</div><div class="page-subtitle" id="pt-subtitle"></div></div>
+        <button class="btn btn-outline" onclick="showView('invoicing')">&larr; Back to Invoicing</button>
+      </div>
+      <div class="stats-row" id="pt-stats"></div>
+      <div class="card">
+        <div class="page-header" style="border:none; margin-bottom:10px; padding-bottom:0">
+          <div class="page-subtitle" style="font-size:13px; text-transform:none; color:var(--navy); font-weight:700">Record a Payment</div>
+          <button class="btn btn-settle btn-sm" id="pt-settle-btn" onclick="fillSettleInFull()">Settle Outstanding in Full</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date</label><input type="date" id="pt-pay-date"></div>
+          <div class="form-group"><label>Amount (Rs)</label><input type="number" id="pt-pay-amount" step="0.01"></div>
+          <div class="form-group"><label>Mode of Payment</label>
+            <select id="pt-pay-mode"><option value="">--</option><option>Debit Card</option><option>Credit Card</option><option>Cheque</option><option>MCB Juice</option></select>
+          </div>
+          <div class="form-group narrow" style="align-self:flex-end"><button class="btn btn-primary" onclick="submitPayment()">Add Payment</button></div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="records-table">
+        <thead><tr><th>Date</th><th>Amount (Rs)</th><th>Mode of Payment</th></tr></thead>
+        <tbody id="pt-tbody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ===================== REPORTS (optometrist) ===================== -->
+    <section class="view" id="view-reports">
+      <div class="page-header"><div><div class="page-title">Reports</div><div class="page-subtitle">Sales, Expenses &amp; Profit</div></div></div>
+      <div class="card">
+        <div class="form-row">
+          <div class="form-group narrow"><label>From</label><input type="date" id="rep-from"></div>
+          <div class="form-group narrow"><label>To</label><input type="date" id="rep-to"></div>
+          <div class="form-group narrow" style="align-self:flex-end"><button class="btn btn-primary" onclick="loadReports()">Run</button></div>
+        </div>
+      </div>
+      <div class="stats-row" id="rep-stats"></div>
+      <div class="card">
+        <div class="page-header" style="border:none; margin-bottom:10px; padding-bottom:0">
+          <div class="page-subtitle" style="font-size:13px; text-transform:none; color:var(--navy); font-weight:700">Expenses</div>
+          <button class="btn btn-outline btn-sm" onclick="openExpenseModal()">+ Add Expense</button>
+        </div>
+        <div class="table-wrap"><table class="records-table">
+          <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount (Rs)</th><th>Actions</th></tr></thead>
+          <tbody id="expense-tbody"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ MODAL: Patient ============ -->
+<div class="modal-overlay" id="modal-patient">
+  <div class="modal">
+    <div class="modal-title" id="patient-modal-title">New Patient</div>
+    <input type="hidden" id="p-id">
+    <div class="form-row">
+      <div class="form-group narrow"><label>Title</label><select id="p-title"><option>Mr</option><option>Mrs</option><option>Ms</option><option>Master</option><option>Miss</option></select></div>
+      <div class="form-group"><label>First Name</label><input type="text" id="p-first"></div>
+      <div class="form-group"><label>Surname</label><input type="text" id="p-surname"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Date of Birth</label><input type="date" id="p-dob" onchange="calcAge()"></div>
+      <div class="form-group narrow"><label>Age</label><input type="number" id="p-age"></div>
+      <div class="form-group"><label>Contact Number</label><input type="text" id="p-contact"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group full"><label>Address</label><input type="text" id="p-address"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group full"><label>Occupation</label><input type="text" id="p-occupation"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-patient')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePatient()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: Appointment ============ -->
+<div class="modal-overlay" id="modal-appointment">
+  <div class="modal">
+    <div class="modal-title">New Appointment</div>
+    <input type="hidden" id="a-id">
+    <div class="form-row">
+      <div class="form-group full"><label>Patient</label>
+        <select id="a-patient"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Date</label><input type="date" id="a-date"></div>
+      <div class="form-group"><label>Time Slot</label><input type="text" id="a-time" placeholder="e.g. 10:30 AM"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group full"><label>Purpose of Visit</label><input type="text" id="a-purpose"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group full"><label>Contact Number</label><input type="text" id="a-contact"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group full"><label>Remarks</label><textarea id="a-remarks" rows="2"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-appointment')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAppointment()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: Eye Exam ============ -->
+<div class="modal-overlay" id="modal-exam">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-title">Eye Examination</div>
+    <input type="hidden" id="e-id"><input type="hidden" id="e-patient-id"><input type="hidden" id="e-appointment-id">
+    <fieldset>
+      <legend>Refraction</legend>
+      <div class="form-row">
+        <div class="form-group narrow"><label>R &ndash; B.V.</label><input type="text" id="e-r-bv"></div>
+        <div class="form-group narrow"><label>R &ndash; C.V.</label><input type="text" id="e-r-cv"></div>
+        <div class="form-group narrow"><label>L &ndash; B.V.</label><input type="text" id="e-l-bv"></div>
+        <div class="form-group narrow"><label>L &ndash; C.V.</label><input type="text" id="e-l-cv"></div>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>History</legend>
+      <div class="form-row">
+        <div class="form-group"><label>GH (General Health)</label><input type="text" id="e-gh"></div>
+        <div class="form-group"><label>FH (Family History)</label><input type="text" id="e-fh"></div>
+        <div class="form-group"><label>OH (Ocular History)</label><input type="text" id="e-oh"></div>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Findings &amp; Recommendation</legend>
+      <div class="form-row"><div class="form-group full"><label>Diagnosis</label><textarea id="e-diagnosis" rows="2"></textarea></div></div>
+      <div class="form-row"><div class="form-group full"><label>Recommendation</label><textarea id="e-recommendation" rows="2"></textarea></div></div>
+      <div class="form-row">
+        <div class="form-group"><label>Lens Type</label><input type="text" id="e-lens-type"></div>
+        <div class="form-group"><label>Lens Proposed</label><input type="text" id="e-lens-proposed"></div>
+      </div>
+      <div class="form-row"><div class="form-group full"><label>Contact Lens Proposed</label><input type="text" id="e-cl-proposed"></div></div>
+      <div class="form-row"><div class="form-group full"><label>Remarks</label><textarea id="e-remarks" rows="2"></textarea></div></div>
+    </fieldset>
+    <p class="locked-note" id="exam-readonly-note" style="display:none">You can view this exam, but only the optometrist can edit clinical findings.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-exam')">Close</button>
+      <button class="btn btn-primary" id="exam-save-btn" onclick="saveExam()">Save Exam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: Inventory Item ============ -->
+<div class="modal-overlay" id="modal-inventory">
+  <div class="modal">
+    <div class="modal-title" id="inv-modal-title">Add Inventory Item</div>
+    <input type="hidden" id="i-id">
+    <div class="form-row">
+      <div class="form-group"><label>Item Type</label>
+        <select id="i-type"><option value="frame">Frame</option><option value="contact_lens">Contact Lens</option><option value="accessory">Accessory</option></select>
+      </div>
+      <div class="form-group"><label>Description / Model</label><input type="text" id="i-description"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>International Code</label><input type="text" id="i-intl-code"></div>
+      <div class="form-group narrow"><label>Size</label><input type="text" id="i-size"></div>
+      <div class="form-group narrow"><label>Colour</label><input type="text" id="i-colour"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Category</label>
+        <select id="i-category"><option>Man</option><option>Woman</option><option>Boy</option><option>Girl</option><option>Child</option><option>Unisex</option></select>
+      </div>
+      <div class="form-group"><label>Type</label>
+        <select id="i-frame-type"><option value="">--</option><option>FM</option><option>FP</option><option>SM</option><option>FL</option><option>SUN</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Cost Price (Rs)</label><input type="number" id="i-price-bought" step="0.01"></div>
+      <div class="form-group"><label>Selling Price (Rs)</label><input type="number" id="i-price-sold" step="0.01"></div>
+      <div class="form-group narrow"><label>Quantity</label><input type="number" id="i-quantity" value="1" min="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-inventory')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveInventoryItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: Expense ============ -->
+<div class="modal-overlay" id="modal-expense">
+  <div class="modal">
+    <div class="modal-title">Add Expense</div>
+    <div class="form-row"><div class="form-group"><label>Date</label><input type="date" id="ex-date"></div>
+    <div class="form-group"><label>Category</label><input type="text" id="ex-category" placeholder="Rent, Utilities, Stock..."></div></div>
+    <div class="form-row"><div class="form-group full"><label>Description</label><input type="text" id="ex-description"></div></div>
+    <div class="form-row"><div class="form-group"><label>Amount (Rs)</label><input type="number" id="ex-amount" step="0.01"></div></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal('modal-expense')">Cancel</button><button class="btn btn-primary" onclick="saveExpense()">Save</button></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: Invoice Builder ============ -->
+<div class="modal-overlay" id="modal-invoice">
+  <div class="modal" style="max-width:980px">
+    <div class="modal-title" id="inv-modal-title-txt">New Document</div>
+    <input type="hidden" id="inv-id"><input type="hidden" id="inv-appointment-id"><input type="hidden" id="inv-invoice-date-iso">
+    <div class="form-row">
+      <div class="form-group"><label>Document Type</label>
+        <input type="text" id="inv-doc-type-display" readonly>
+        <input type="hidden" id="inv-doc-type">
+      </div>
+      <div class="form-group"><label>Invoice Date</label><input type="text" id="inv-invoice-date-display" readonly></div>
+      <div class="form-group full"><label>Billing Client &mdash; type to search patients</label>
+        <div class="ac-wrap">
+          <input type="text" id="inv-patient-search" placeholder="Type patient name, code or phone..." autocomplete="off"
+            oninput="filterPatientAutocomplete(this.value)" onfocus="filterPatientAutocomplete(this.value)"
+            onblur="setTimeout(()=>{ if($('inv-patient-results')) $('inv-patient-results').style.display='none'; },150)">
+          <div class="autocomplete-results" id="inv-patient-results"></div>
+        </div>
+        <input type="hidden" id="inv-patient">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group full"><label>Client Name (editable, e.g. walk-in)</label><input type="text" id="inv-client-name"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Order Number <span class="locked-note">(left blank &mdash; filled by hand)</span></label><input type="text" id="inv-order-number"></div>
+      <div class="form-group"><label>Order Date <span class="locked-note">(internal record only, not printed)</span></label><input type="date" id="inv-order-date"></div>
+    </div>
+
+    <div class="items-scroll">
+      <div class="item-row header-row">
+        <div>Description</div><div>Unit Price (Rs)</div><div>Discount (Rs)</div><div>VAT %</div><div>VAT Amt (Rs)</div><div>Total (Rs)</div><div>Discount (Internal)</div><div>Total Payable (Rs)</div><div></div>
+      </div>
+      <div id="inv-items-list"></div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="addInvoiceItemRow()">+ Add Row</button>
+
+    <div class="totals-box" style="max-width:none; margin-left:0; margin-top:16px">
+      <table class="records-table" style="width:100%">
+        <thead><tr><th>Sub-total (Rs)</th><th>Total VAT Amount (Rs)</th><th>Grand Total (Rs)</th></tr></thead>
+        <tbody><tr><td id="inv-subtotal" style="text-align:center; font-weight:700">Rs 0.00</td><td id="inv-vat" style="text-align:center; font-weight:700">Rs 0.00</td><td id="inv-total" style="text-align:center; font-weight:700; color:var(--navy)">Rs 0.00</td></tr></tbody>
+      </table>
+    </div>
+
+    <fieldset style="margin-top:14px">
+      <legend>Payment</legend>
+      <div class="form-row">
+        <div class="form-group"><label>Mode of Payment</label>
+          <select id="inv-mode"><option value="">--</option><option>Debit Card</option><option>Credit Card</option><option>Cheque</option><option>MCB Juice</option></select>
+        </div>
+        <div class="form-group"><label>Deposit (Rs)</label><input type="number" id="inv-deposit" step="0.01" value="0" oninput="updateTotals()"></div>
+        <div class="form-group"><label>Outstanding (Rs)</label><input type="text" id="inv-outstanding" readonly></div>
+      </div>
+      <p class="locked-note" id="inv-paid-full-note" style="display:none">Deposit equals the Grand Total &mdash; this will print as "Paid in Full".</p>
+    </fieldset>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-invoice')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveInvoice()">Save Document</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============ PRINTABLE INVOICE ============ -->
+<div id="print-area"></div>
+
+<script>
+/* =========================================================
+   CONFIG — fill these in with your Supabase project details
+   (Project Settings > API). The anon key is safe to expose
+   in client code: real security is enforced by the RLS
+   policies and SECURITY DEFINER functions in schema.sql.
+   ========================================================= */
+const SUPABASE_URL = 'https://sgywyapxpbjukpnjvlpt.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNneXd5YXB4cGJqdWtwbmp2bHB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMDc2NzksImV4cCI6MjEwNDc4MzY3OX0.mK2glpAYCz3TBD7NMZpxYBP3onpE4W49fYvFrNOalek';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let state = {
+  user: null, profile: null,
+  patients: [], appointments: [], inventory: [], invoices: [], expenses: [],
+  currentInvoiceItems: [], // {kind:'exam'|'custom', description, total_payable, discount_value, discount_type}
+  currentPaymentInvoiceId: null, currentPaymentInvoiceOutstanding: 0
+};
+
+/* ---------------- UTIL ---------------- */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return (s===null||s===undefined) ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtMoney(n){ return 'Rs ' + (Number(n)||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtDate(d){ if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('en-GB'); }
+function toast(msg, type){
+  const t = $('toast'); t.textContent = msg; t.className = 'toast show ' + (type||'success');
+  setTimeout(()=> t.className = 'toast', 2500);
+}
+function closeModal(id){ $(id).classList.remove('active'); }
+function openModalEl(id){ $(id).classList.add('active'); }
+function isOptometrist(){ return state.profile && state.profile.role === 'optometrist'; }
+
+/* ---------------- AUTH ---------------- */
+function switchAuthTab(tab){
+  $('tab-login-btn').classList.toggle('active', tab==='login');
+  $('tab-signup-btn').classList.toggle('active', tab==='signup');
+  $('login-form').style.display = tab==='login' ? 'block' : 'none';
+  $('signup-form').style.display = tab==='signup' ? 'block' : 'none';
+}
+
+async function doLogin(){
+  const email = $('login-email').value.trim();
+  const password = $('login-password').value;
+  if(!email || !password){ toast('Enter email and password', 'error'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ toast(error.message, 'error'); return; }
+  await afterLogin();
+}
+
+async function doSignup(){
+  const email = $('signup-email').value.trim();
+  const password = $('signup-password').value;
+  const full_name = $('signup-name').value.trim();
+  if(!email || !password){ toast('Enter email and password', 'error'); return; }
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name } } });
+  if(error){ toast(error.message, 'error'); return; }
+  if(data.session){ await afterLogin(); }
+  else { toast('Account created — check your email to confirm, then log in.', 'success'); switchAuthTab('login'); }
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  state = { user:null, profile:null, patients:[], appointments:[], inventory:[], invoices:[], expenses:[], currentInvoiceItems:[] };
+  $('app').classList.remove('active');
+  $('login-screen').style.display = 'flex';
+}
+
+async function afterLogin(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user){ toast('Login failed', 'error'); return; }
+  state.user = user;
+  const { data: profile, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if(error || !profile){ toast('Could not load profile. Contact the optometrist.', 'error'); return; }
+  state.profile = profile;
+  $('login-screen').style.display = 'none';
+  $('app').classList.add('active');
+  $('hdr-username').textContent = profile.full_name || user.email;
+  $('hdr-role').textContent = profile.role;
+  applyRoleVisibility();
+  await loadAll();
+  showView('dashboard');
+}
+
+function applyRoleVisibility(){
+  document.querySelectorAll('[data-role="optometrist"]').forEach(el => {
+    el.style.display = isOptometrist() ? '' : 'none';
+  });
+  $('inv-add-btn').style.display = isOptometrist() ? '' : 'none';
+  $('inv-secretary-note').style.display = isOptometrist() ? 'none' : 'block';
+  const theadRow = $('inv-thead-row');
+  if(!isOptometrist()){
+    theadRow.innerHTML = '<th>Local Code</th><th>Type</th><th>Description</th><th>Size/Colour</th><th>Selling Price</th><th>Stock</th><th>Sold</th><th>Actions</th>';
+  } else {
+    theadRow.innerHTML = '<th>Local Code</th><th>Type</th><th>Description</th><th>Size/Colour</th><th>Cost</th><th>Selling Price</th><th>Stock</th><th>Sold</th><th>Actions</th>';
+  }
+}
+
+/* ---------------- VIEW SWITCHING ---------------- */
+function showView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav.sidebar button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view===name));
+  const view = $('view-' + name);
+  if(view) view.classList.add('active');
+  if(name==='dashboard') renderDashboard();
+  if(name==='appointments') renderAppointments();
+  if(name==='patients') renderPatients();
+  if(name==='inventory') renderInventory();
+  if(name==='invoicing') renderInvoices();
+  if(name==='reports'){
+    if(!isOptometrist()){ toast('Reports are only available to the optometrist', 'error'); showView('dashboard'); return; }
+    const today = new Date().toISOString().slice(0,10);
+    const monthAgo = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+    if(!$('rep-from').value) $('rep-from').value = monthAgo;
+    if(!$('rep-to').value) $('rep-to').value = today;
+    loadReports();
+    loadExpenses();
+  }
+}
+
+/* ---------------- LOAD ALL DATA ---------------- */
+async function loadAll(){
+  await Promise.all([loadPatients(), loadAppointments(), loadInventory(), loadInvoices()]);
+}
+
+/* ================= PATIENTS ================= */
+async function loadPatients(){
+  const { data, error } = await sb.from('patients').select('*').order('created_at', {ascending:false});
+  if(error){ toast('Error loading patients: '+error.message, 'error'); return; }
+  state.patients = data || [];
+}
+
+function calcAge(){
+  const dob = $('p-dob').value;
+  if(!dob) return;
+  const diff = Date.now() - new Date(dob).getTime();
+  $('p-age').value = Math.floor(diff / (365.25*86400000));
+}
+
+function openPatientModal(id){
+  $('patient-modal-title').textContent = id ? 'Edit Patient' : 'New Patient';
+  $('p-id').value = id || '';
+  const p = id ? state.patients.find(x=>x.id===id) : null;
+  $('p-title').value = p ? (p.title||'Mr') : 'Mr';
+  $('p-first').value = p ? p.first_name : '';
+  $('p-surname').value = p ? p.surname : '';
+  $('p-dob').value = p ? (p.dob||'') : '';
+  $('p-age').value = p ? (p.age||'') : '';
+  $('p-contact').value = p ? (p.contact_number||'') : '';
+  $('p-address').value = p ? (p.address||'') : '';
+  $('p-occupation').value = p ? (p.occupation||'') : '';
+  openModalEl('modal-patient');
+}
+
+async function savePatient(){
+  const payload = {
+    title: $('p-title').value, first_name: $('p-first').value.trim(), surname: $('p-surname').value.trim(),
+    dob: $('p-dob').value || null, age: $('p-age').value ? parseInt($('p-age').value) : null,
+    contact_number: $('p-contact').value.trim(), address: $('p-address').value.trim(), occupation: $('p-occupation').value.trim()
+  };
+  if(!payload.first_name || !payload.surname){ toast('Name and surname are required', 'error'); return; }
+  const id = $('p-id').value;
+  let error;
+  if(id){ ({ error } = await sb.from('patients').update(payload).eq('id', id)); }
+  else { ({ error } = await sb.from('patients').insert(payload)); }
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Patient saved');
+  closeModal('modal-patient');
+  await loadPatients(); renderPatients(); populatePatientSelects();
+}
+
+async function deletePatient(id){
+  if(!confirm('Delete this patient record? This cannot be undone.')) return;
+  const { error } = await sb.from('patients').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Patient deleted'); await loadPatients(); renderPatients();
+}
+
+function renderPatients(){
+  const q = ($('patient-search').value||'').toLowerCase();
+  const rows = state.patients.filter(p =>
+    !q || (p.first_name+' '+p.surname).toLowerCase().includes(q) || (p.patient_code||'').toLowerCase().includes(q) || (p.contact_number||'').includes(q)
+  );
+  const tbody = $('patient-tbody');
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No patients found</h3></div></td></tr>'; return; }
+  tbody.innerHTML = rows.map(p => `
+    <tr>
+      <td><span class="badge">${esc(p.patient_code)}</span></td>
+      <td>${esc(p.title)} ${esc(p.first_name)} ${esc(p.surname)}</td>
+      <td>${fmtDate(p.dob)} ${p.age?('('+p.age+')'):''}</td>
+      <td>${esc(p.contact_number)}</td>
+      <td>${esc(p.occupation)}</td>
+      <td class="record-actions">
+        <button class="btn btn-outline btn-sm" onclick="openPatientModal(${p.id})">Edit</button>
+        <button class="btn btn-outline btn-sm" onclick="openExamModal(${p.id})">Eye Exam</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePatient(${p.id})">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function populatePatientSelects(){
+  const opts = '<option value="">-- Select Patient --</option>' + state.patients.map(p => `<option value="${p.id}">${esc(p.patient_code)} — ${esc(p.first_name)} ${esc(p.surname)}</option>`).join('');
+  $('a-patient').innerHTML = opts;
+}
+
+function filterPatientAutocomplete(query){
+  const box = $('inv-patient-results');
+  const q = (query||'').trim().toLowerCase();
+  if(!q){ box.innerHTML=''; box.style.display='none'; return; }
+  const matches = state.patients.filter(p =>
+    (p.first_name+' '+p.surname).toLowerCase().includes(q) || (p.patient_code||'').toLowerCase().includes(q) || (p.contact_number||'').includes(q)
+  ).slice(0,8);
+  box.innerHTML = matches.length ? matches.map(p => `<div class="ac-item" onmousedown="selectPatientForInvoice(${p.id})"><strong>${esc(p.patient_code)}</strong> — ${esc(p.first_name)} ${esc(p.surname)}<span class="ac-sub">${esc(p.contact_number||'')}</span></div>`).join('')
+    : '<div class="ac-empty">No matching patient — you can still type a free-text client name below.</div>';
+  box.style.display='block';
+}
+
+function selectPatientForInvoice(id){
+  const p = state.patients.find(x=>x.id===id);
+  if(!p) return;
+  $('inv-patient').value = id;
+  $('inv-patient-search').value = `${p.patient_code} — ${p.first_name} ${p.surname}`;
+  $('inv-patient-results').style.display='none';
+  onInvoicePatientChange();
+}
+
+function setInvoicePatientDisplay(id){
+  const p = id ? state.patients.find(x=>x.id===parseInt(id)) : null;
+  $('inv-patient-search').value = p ? `${p.patient_code} — ${p.first_name} ${p.surname}` : '';
+}
+
+/* ================= APPOINTMENTS ================= */
+async function loadAppointments(){
+  const { data, error } = await sb.from('appointments').select('*, patients(first_name, surname, patient_code)').order('appt_date', {ascending:false});
+  if(error){ toast('Error loading appointments: '+error.message, 'error'); return; }
+  state.appointments = data || [];
+}
+
+function openAppointmentModal(id){
+  populatePatientSelects();
+  $('a-id').value = id || '';
+  const a = id ? state.appointments.find(x=>x.id===id) : null;
+  $('a-patient').value = a ? a.patient_id : '';
+  $('a-date').value = a ? a.appt_date : new Date().toISOString().slice(0,10);
+  $('a-time').value = a ? (a.time_slot||'') : '';
+  $('a-purpose').value = a ? (a.purpose_of_visit||'') : '';
+  $('a-contact').value = a ? (a.contact_number||'') : '';
+  $('a-remarks').value = a ? (a.remarks||'') : '';
+  openModalEl('modal-appointment');
+}
+
+async function saveAppointment(){
+  const patient_id = $('a-patient').value;
+  if(!patient_id){ toast('Select a patient', 'error'); return; }
+  const payload = {
+    patient_id: parseInt(patient_id), appt_date: $('a-date').value, time_slot: $('a-time').value.trim(),
+    purpose_of_visit: $('a-purpose').value.trim(), contact_number: $('a-contact').value.trim(), remarks: $('a-remarks').value.trim()
+  };
+  const id = $('a-id').value;
+  let error;
+  if(id){ ({ error } = await sb.from('appointments').update(payload).eq('id', id)); }
+  else { payload.created_by = state.user.id; ({ error } = await sb.from('appointments').insert(payload)); }
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Appointment saved'); closeModal('modal-appointment'); await loadAppointments(); renderAppointments();
+}
+
+async function setAppointmentStatus(id, status){
+  const { error } = await sb.from('appointments').update({status}).eq('id', id);
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  await loadAppointments(); renderAppointments();
+}
+
+async function cancelAppointment(id){
+  if(!confirm('Cancel this appointment?')) return;
+  await setAppointmentStatus(id, 'cancelled');
+  toast('Appointment cancelled');
+}
+
+function renderAppointments(){
+  const q = ($('appt-search').value||'').toLowerCase();
+  const dateFilter = $('appt-date-filter').value;
+  const rows = state.appointments.filter(a => {
+    const pname = a.patients ? (a.patients.first_name+' '+a.patients.surname) : '';
+    const matchQ = !q || pname.toLowerCase().includes(q) || (a.contact_number||'').includes(q);
+    const matchD = !dateFilter || a.appt_date === dateFilter;
+    return matchQ && matchD;
+  });
+  const tbody = $('appt-tbody');
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><h3>No appointments found</h3></div></td></tr>'; return; }
+  tbody.innerHTML = rows.map(a => `
+    <tr>
+      <td>${fmtDate(a.appt_date)}</td>
+      <td>${esc(a.time_slot)}</td>
+      <td>${a.patients ? esc(a.patients.first_name+' '+a.patients.surname) : '<em>—</em>'}</td>
+      <td>${esc(a.contact_number)}</td>
+      <td>${esc(a.purpose_of_visit)}</td>
+      <td><span class="badge ${a.status}">${a.status.replace('_',' ')}</span></td>
+      <td class="record-actions">
+        ${a.status==='scheduled' ? `<button class="btn btn-outline btn-sm" onclick="setAppointmentStatus(${a.id},'checked_in')">Check In</button>` : ''}
+        ${a.status==='checked_in' ? `<button class="btn btn-outline btn-sm" onclick="openExamModal(${a.patient_id},${a.id})">Start Exam</button>` : ''}
+        ${a.status==='exam_done' ? `<button class="btn btn-gold btn-sm" onclick="openInvoiceBuilder('order', ${a.patient_id}, ${a.id})">Invoice</button>` : ''}
+        ${['scheduled','checked_in'].includes(a.status) ? `<button class="btn btn-danger btn-sm" onclick="cancelAppointment(${a.id})">Cancel</button>` : ''}
+        <button class="btn btn-outline btn-sm" onclick="openAppointmentModal(${a.id})">Edit</button>
+      </td>
+    </tr>`).join('');
+}
+
+/* ================= EYE EXAM ================= */
+async function openExamModal(patientId, appointmentId){
+  $('e-patient-id').value = patientId;
+  $('e-appointment-id').value = appointmentId || '';
+  let exam = null;
+  const { data } = await sb.from('eye_exams').select('*').eq('patient_id', patientId).order('created_at', {ascending:false}).limit(1);
+  if(data && data.length) exam = data[0];
+  $('e-id').value = exam ? exam.id : '';
+  $('e-r-bv').value = exam ? (exam.r_bv||'') : '';
+  $('e-r-cv').value = exam ? (exam.r_cv||'') : '';
+  $('e-l-bv').value = exam ? (exam.l_bv||'') : '';
+  $('e-l-cv').value = exam ? (exam.l_cv||'') : '';
+  $('e-gh').value = exam ? (exam.gh||'') : '';
+  $('e-fh').value = exam ? (exam.fh||'') : '';
+  $('e-oh').value = exam ? (exam.oh||'') : '';
+  $('e-diagnosis').value = exam ? (exam.diagnosis||'') : '';
+  $('e-recommendation').value = exam ? (exam.recommendation||'') : '';
+  $('e-lens-type').value = exam ? (exam.lens_type||'') : '';
+  $('e-lens-proposed').value = exam ? (exam.lens_proposed||'') : '';
+  $('e-cl-proposed').value = exam ? (exam.contact_lens_proposed||'') : '';
+  $('e-remarks').value = exam ? (exam.remarks||'') : '';
+
+  const fields = ['e-r-bv','e-r-cv','e-l-bv','e-l-cv','e-gh','e-fh','e-oh','e-diagnosis','e-recommendation','e-lens-type','e-lens-proposed','e-cl-proposed','e-remarks'];
+  fields.forEach(f => $(f).disabled = !isOptometrist());
+  $('exam-save-btn').style.display = isOptometrist() ? '' : 'none';
+  $('exam-readonly-note').style.display = isOptometrist() ? 'none' : 'block';
+  openModalEl('modal-exam');
+}
+
+async function saveExam(){
+  if(!isOptometrist()){ toast('Only the optometrist can save exam findings', 'error'); return; }
+  const patient_id = parseInt($('e-patient-id').value);
+  const appointment_id = $('e-appointment-id').value ? parseInt($('e-appointment-id').value) : null;
+  const payload = {
+    patient_id, appointment_id,
+    r_bv: $('e-r-bv').value, r_cv: $('e-r-cv').value, l_bv: $('e-l-bv').value, l_cv: $('e-l-cv').value,
+    gh: $('e-gh').value, fh: $('e-fh').value, oh: $('e-oh').value,
+    diagnosis: $('e-diagnosis').value, recommendation: $('e-recommendation').value,
+    lens_type: $('e-lens-type').value, lens_proposed: $('e-lens-proposed').value,
+    contact_lens_proposed: $('e-cl-proposed').value, remarks: $('e-remarks').value,
+    optometrist_id: state.user.id
+  };
+  const { error } = await sb.from('eye_exams').insert(payload);
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  if(appointment_id) await setAppointmentStatus(appointment_id, 'exam_done');
+  toast('Exam saved'); closeModal('modal-exam'); await loadAppointments(); renderAppointments();
+}
+
+/* ================= INVENTORY ================= */
+async function loadInventory(){
+  const { data, error } = await sb.rpc('get_inventory');
+  if(error){ toast('Error loading inventory: '+error.message, 'error'); return; }
+  state.inventory = data || [];
+}
+
+function openInventoryModal(id){
+  if(!isOptometrist()){ toast('Only the optometrist can add or edit inventory items', 'error'); return; }
+  $('inv-modal-title').textContent = id ? 'Edit Inventory Item' : 'Add Inventory Item';
+  $('i-id').value = id || '';
+  const it = id ? state.inventory.find(x=>x.id===id) : null;
+  $('i-type').value = it ? it.item_type : 'frame';
+  $('i-description').value = it ? (it.description||'') : '';
+  $('i-intl-code').value = it ? (it.international_code||'') : '';
+  $('i-size').value = it ? (it.size||'') : '';
+  $('i-colour').value = it ? (it.colour||'') : '';
+  $('i-category').value = it ? (it.category||'Unisex') : 'Unisex';
+  $('i-frame-type').value = it ? (it.type||'') : '';
+  $('i-price-bought').value = it ? it.price_bought : '';
+  $('i-price-sold').value = it ? it.price_sold : '';
+  $('i-quantity').value = it ? it.quantity : 1;
+  openModalEl('modal-inventory');
+}
+
+async function saveInventoryItem(){
+  const id = $('i-id').value;
+  const args = {
+    p_item_type: $('i-type').value, p_international_code: $('i-intl-code').value.trim(),
+    p_size: $('i-size').value.trim(), p_colour: $('i-colour').value.trim(),
+    p_category: $('i-category').value, p_type: $('i-frame-type').value || null,
+    p_price_bought: parseFloat($('i-price-bought').value)||0, p_price_sold: parseFloat($('i-price-sold').value)||0,
+    p_quantity: parseInt($('i-quantity').value)||0, p_description: $('i-description').value.trim()
+  };
+  let error;
+  if(id){
+    ({ error } = await sb.rpc('update_inventory_item', { p_id: parseInt(id), p_international_code: args.p_international_code, p_size: args.p_size, p_colour: args.p_colour, p_category: args.p_category, p_type: args.p_type, p_price_bought: args.p_price_bought, p_price_sold: args.p_price_sold, p_quantity: args.p_quantity, p_description: args.p_description }));
+  } else {
+    args.p_date_entered = new Date().toISOString().slice(0,10);
+    ({ error } = await sb.rpc('add_inventory_item', args));
+  }
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Inventory item saved'); closeModal('modal-inventory'); await loadInventory(); renderInventory();
+}
+
+async function deleteInventoryItem(id){
+  if(!isOptometrist()){ toast('Only the optometrist can delete inventory items', 'error'); return; }
+  if(!confirm('Delete this inventory item?')) return;
+  const { error } = await sb.rpc('delete_inventory_item', { p_id: id });
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Item deleted'); await loadInventory(); renderInventory();
+}
+
+function renderInventory(){
+  const q = ($('inv-search').value||'').toLowerCase();
+  const typeF = $('inv-type-filter').value;
+  const rows = state.inventory.filter(i =>
+    (!typeF || i.item_type===typeF) &&
+    (!q || (i.local_code||'').toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q) || (i.colour||'').toLowerCase().includes(q) || (i.international_code||'').toLowerCase().includes(q))
+  );
+  const tbody = $('inv-tbody');
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><h3>No items found</h3></div></td></tr>`; return; }
+  tbody.innerHTML = rows.map(i => `
+    <tr>
+      <td><span class="badge">${esc(i.local_code)}</span></td>
+      <td>${esc(i.item_type.replace('_',' '))}</td>
+      <td>${esc(i.description||i.international_code||'')}</td>
+      <td>${esc(i.size)} / ${esc(i.colour)}</td>
+      ${isOptometrist() ? `<td>${fmtMoney(i.price_bought)}</td>` : ''}
+      <td>${fmtMoney(i.price_sold)}</td>
+      <td>${i.quantity}</td>
+      <td>${i.sold_quantity}</td>
+      <td class="record-actions">
+        ${isOptometrist() ? `<button class="btn btn-outline btn-sm" onclick="openInventoryModal(${i.id})">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteInventoryItem(${i.id})">Delete</button>` : '<span class="locked-note">View only</span>'}
+      </td>
+    </tr>`).join('');
+}
+
+/* ================= INVOICING ================= */
+function round2(n){ return Math.round((Number(n)||0)*100)/100; }
+function docTypeLabel(t){ return t==='vat_invoice' ? 'VAT Invoice' : (t==='order' ? 'Order' : 'Quotation'); }
+
+function calcLineItem(it){
+  if(it.kind === 'exam'){
+    return { unit_price:700, discount_rs:0, vat_rate:0, vat_amount:0, line_total:700, total_payable:700 };
+  }
+  const P = parseFloat(it.total_payable)||0;
+  const unit_price = round2(P/1.15);
+  const dv = parseFloat(it.discount_value)||0;
+  const discount_amount_rs = it.discount_type==='percent' ? (dv/100)*P : dv;
+  const line_total = round2(P - discount_amount_rs);
+  const discount_rs = round2(discount_amount_rs/1.15);
+  const vat_amount = round2(0.15*(unit_price - discount_rs));
+  return { unit_price, discount_rs, vat_rate:15, vat_amount, line_total, total_payable:P };
+}
+
+async function loadInvoices(){
+  const { data, error } = await sb.from('invoices').select('*, patients(first_name, surname, patient_code)').order('created_at', {ascending:false});
+  if(error){ toast('Error loading invoices: '+error.message, 'error'); return; }
+  state.invoices = data || [];
+  updateNavOutstandingBadge();
+}
+
+function updateNavOutstandingBadge(){
+  const badge = $('nav-outstanding-badge');
+  if(!badge) return;
+  const count = state.invoices.filter(i => (i.outstanding||0) > 0).length;
+  if(count > 0){ badge.textContent = count; badge.style.display = 'inline-block'; }
+  else { badge.style.display = 'none'; }
+}
+
+function clearInvoiceFilters(){
+  $('invoice-search').value=''; $('invoice-date-from').value=''; $('invoice-date-to').value='';
+  $('invoice-type-filter').value=''; $('invoice-outstanding-only').checked=false;
+  renderInvoices();
+}
+
+function openInvoiceBuilder(docType, patientId, appointmentId){
+  populatePatientSelects();
+  $('inv-id').value = '';
+  $('inv-appointment-id').value = appointmentId || '';
+  $('inv-doc-type').value = docType;
+  $('inv-doc-type-display').value = docTypeLabel(docType);
+  const today = new Date().toISOString().slice(0,10);
+  $('inv-invoice-date-iso').value = today;
+  $('inv-invoice-date-display').value = fmtDate(today);
+  $('inv-patient').value = patientId || '';
+  setInvoicePatientDisplay(patientId);
+  onInvoicePatientChange();
+  $('inv-order-number').value = ''; $('inv-order-date').value = '';
+  $('inv-mode').value = ''; $('inv-deposit').value = 0;
+  state.currentInvoiceItems = [{ kind:'exam', description:'Eye Examination', total_payable:700, discount_value:0, discount_type:'rs' }];
+  renderInvoiceItems();
+  openModalEl('modal-invoice');
+}
+
+function onInvoicePatientChange(){
+  const id = $('inv-patient').value;
+  const p = id ? state.patients.find(x => x.id === parseInt(id)) : null;
+  $('inv-client-name').value = p ? `${p.title||''} ${p.first_name} ${p.surname}`.trim() : $('inv-client-name').value;
+}
+
+async function editInvoiceDoc(id){
+  const inv = state.invoices.find(x => x.id === id);
+  if(!inv){ toast('Document not found', 'error'); return; }
+  if(inv.delivered){ toast('This document is delivered and locked — you can still print or convert it.', 'error'); return; }
+  const { data: items, error } = await sb.from('invoice_items').select('*').eq('invoice_id', id).order('sort_order');
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  populatePatientSelects();
+  $('inv-id').value = inv.id;
+  $('inv-appointment-id').value = inv.appointment_id || '';
+  $('inv-doc-type').value = inv.document_type;
+  $('inv-doc-type-display').value = docTypeLabel(inv.document_type);
+  $('inv-invoice-date-iso').value = inv.invoice_date;
+  $('inv-invoice-date-display').value = fmtDate(inv.invoice_date);
+  $('inv-patient').value = inv.patient_id || '';
+  setInvoicePatientDisplay(inv.patient_id);
+  $('inv-client-name').value = inv.client_name || '';
+  $('inv-order-number').value = inv.order_number || '';
+  $('inv-order-date').value = inv.order_date || '';
+  $('inv-mode').value = inv.mode_of_payment || '';
+  $('inv-deposit').value = inv.deposit || 0;
+  state.currentInvoiceItems = (items||[]).map(it => ({
+    kind: it.item_type === 'exam' ? 'exam' : (it.item_type === 'inventory' ? 'inventory' : 'custom'),
+    description: it.description, inventory_id: it.inventory_id || null, quantity: it.quantity || 1,
+    total_payable: it.total_payable, discount_value: it.discount_internal_value, discount_type: it.discount_internal_type
+  }));
+  if(!state.currentInvoiceItems.length){ state.currentInvoiceItems.push({ kind:'exam', description:'Eye Examination', total_payable:700, discount_value:0, discount_type:'rs' }); }
+  renderInvoiceItems();
+  openModalEl('modal-invoice');
+}
+
+function addInvoiceItemRow(){
+  state.currentInvoiceItems.push({ kind:'custom', description:'', total_payable:0, discount_value:0, discount_type:'rs' });
+  renderInvoiceItems();
+}
+
+function removeInvoiceItemRow(idx){ state.currentInvoiceItems.splice(idx,1); renderInvoiceItems(); }
+
+function onItemKindChange(idx, val){
+  const it = state.currentInvoiceItems[idx];
+  it.kind = val;
+  it.inventory_id = null;
+  if(val==='exam'){ it.description='Eye Examination'; it.total_payable=700; it.discount_value=0; it.quantity=1; }
+  else if(val==='inventory'){ it.description=''; it.total_payable=0; it.quantity=1; }
+  else { it.description=''; it.total_payable=0; }
+  renderInvoiceItems();
+}
+
+function onItemField(idx, field, val){
+  const it = state.currentInvoiceItems[idx];
+  if(field==='description') it.description = val;
+  else if(field==='discount_type') it.discount_type = val;
+  else it[field] = parseFloat(val)||0;
+  if(field==='quantity' && it.kind==='inventory' && it.inventory_id){
+    const item = state.inventory.find(i => i.id === it.inventory_id);
+    if(item) it.total_payable = round2(item.price_sold * it.quantity);
+  }
+  renderInvoiceItems();
+}
+
+function filterInventoryAutocomplete(idx, query){
+  const box = $('inv-item-results-'+idx);
+  if(!box) return;
+  const q = (query||'').trim().toLowerCase();
+  if(!q){ box.innerHTML=''; box.style.display='none'; return; }
+  const matches = state.inventory.filter(i =>
+    (i.local_code||'').toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q) || (i.international_code||'').toLowerCase().includes(q)
+  ).slice(0,8);
+  box.innerHTML = matches.length ? matches.map(i => `<div class="ac-item" onmousedown="selectInventoryForRow(${idx}, ${i.id})"><strong>${esc(i.local_code)}</strong> — ${esc(i.description||i.international_code||'')}<span class="ac-sub">Rs ${Number(i.price_sold).toFixed(2)} &middot; ${i.quantity} in stock</span></div>`).join('')
+    : '<div class="ac-empty">No matching item</div>';
+  box.style.display='block';
+}
+
+function selectInventoryForRow(idx, itemId){
+  const item = state.inventory.find(i => i.id === itemId);
+  if(!item) return;
+  const it = state.currentInvoiceItems[idx];
+  it.inventory_id = item.id;
+  it.description = item.description || item.local_code;
+  it.quantity = it.quantity || 1;
+  it.total_payable = round2(item.price_sold * it.quantity);
+  renderInvoiceItems();
+}
+
+function renderInvoiceItems(){
+  let html = '';
+  state.currentInvoiceItems.forEach((it, idx) => {
+    const c = calcLineItem(it);
+    const isExam = it.kind === 'exam';
+    const isInventory = it.kind === 'inventory';
+    const isCustom = it.kind === 'custom';
+    let descCell = `<select onchange="onItemKindChange(${idx}, this.value)">
+        <option value="exam" ${isExam?'selected':''}>Eye Examination</option>
+        <option value="inventory" ${isInventory?'selected':''}>Select from Inventory</option>
+        <option value="custom" ${isCustom?'selected':''}>Enter Description</option>
+      </select>`;
+    if(isCustom){
+      descCell += `<input type="text" placeholder="Description" value="${esc(it.description||'')}" onchange="onItemField(${idx},'description',this.value)" style="margin-top:4px">`;
+    } else if(isInventory){
+      const selectedLabel = it.inventory_id ? esc(it.description||'') : '';
+      descCell += `<div class="ac-wrap" style="margin-top:4px">
+          <input type="text" placeholder="Search code or name..." value="${selectedLabel}" autocomplete="off"
+            oninput="filterInventoryAutocomplete(${idx}, this.value)" onfocus="filterInventoryAutocomplete(${idx}, this.value)"
+            onblur="setTimeout(()=>{ if($('inv-item-results-${idx}')) $('inv-item-results-${idx}').style.display='none'; },150)">
+          <div class="autocomplete-results" id="inv-item-results-${idx}"></div>
+        </div>
+        <input type="number" min="1" value="${it.quantity||1}" title="Quantity" style="margin-top:4px; width:70px" onchange="onItemField(${idx},'quantity',this.value)">`;
+    }
+    html += `<div class="item-row">
+      <div>${descCell}</div>
+      <div>${fmtMoney(c.unit_price)}</div>
+      <div>${fmtMoney(c.discount_rs)}</div>
+      <div>${c.vat_rate}%</div>
+      <div>${fmtMoney(c.vat_amount)}</div>
+      <div style="font-weight:700; color:var(--navy)">${fmtMoney(c.line_total)}</div>
+      <div>${isExam ? '<span class="locked-note">N/A</span>' : `
+          <input type="number" min="0" step="0.01" value="${it.discount_value||0}" onchange="onItemField(${idx},'discount_value',this.value)" style="margin-bottom:4px">
+          <select onchange="onItemField(${idx},'discount_type',this.value)">
+            <option value="rs" ${it.discount_type==='rs'?'selected':''}>Rs</option>
+            <option value="percent" ${it.discount_type==='percent'?'selected':''}>%</option>
+          </select>`}</div>
+      <div>${isExam ? `<input type="text" value="Rs 700.00" readonly>` : `<input type="number" min="0" step="0.01" value="${it.total_payable||0}" onchange="onItemField(${idx},'total_payable',this.value)">`}</div>
+      <div><button class="btn btn-danger btn-sm" onclick="removeInvoiceItemRow(${idx})">&times;</button></div>
+    </div>`;
+  });
+  $('inv-items-list').innerHTML = html || '<p class="locked-note" style="padding:10px 0">No rows yet — click "+ Add Row".</p>';
+  updateTotals();
+}
+
+function updateTotals(){
+  let subtotal=0, vat=0, grand=0;
+  state.currentInvoiceItems.forEach(it => { const c = calcLineItem(it); subtotal+=c.unit_price; vat+=c.vat_amount; grand+=c.line_total; });
+  subtotal=round2(subtotal); vat=round2(vat); grand=round2(grand);
+  const deposit = parseFloat($('inv-deposit').value)||0;
+  const outstanding = round2(Math.max(grand - deposit, 0));
+  $('inv-subtotal').textContent = fmtMoney(subtotal);
+  $('inv-vat').textContent = fmtMoney(vat);
+  $('inv-total').textContent = fmtMoney(grand);
+  $('inv-outstanding').value = fmtMoney(outstanding);
+  $('inv-paid-full-note').style.display = (grand>0 && deposit>=grand) ? 'block' : 'none';
+  return { subtotal, vat, grand, deposit, outstanding };
+}
+
+async function saveInvoice(){
+  const patient_id = $('inv-patient').value;
+  const client_name = $('inv-client-name').value.trim();
+  if(!client_name){ toast('Enter a billing client name', 'error'); return; }
+  if(!state.currentInvoiceItems.length){ toast('Add at least one row', 'error'); return; }
+  const totals = updateTotals();
+  const id = $('inv-id').value;
+  const isNew = !id;
+  const document_type = $('inv-doc-type').value;
+
+  const header = {
+    patient_id: patient_id ? parseInt(patient_id) : null, client_name,
+    appointment_id: $('inv-appointment-id').value ? parseInt($('inv-appointment-id').value) : null,
+    order_number: $('inv-order-number').value.trim() || null, order_date: $('inv-order-date').value || null,
+    mode_of_payment: $('inv-mode').value || null, deposit: totals.deposit,
+    subtotal: totals.subtotal, vat_amount: totals.vat, grand_total: totals.grand, outstanding: totals.outstanding
+  };
+
+  let invoiceId = id ? parseInt(id) : null;
+  if(isNew){
+    header.document_type = document_type; // only 'quotation' or 'order' — enforced by DB trigger too
+    header.invoice_date = $('inv-invoice-date-iso').value;
+    header.created_by = state.user.id;
+    const { data, error } = await sb.from('invoices').insert(header).select().single();
+    if(error){ toast('Error: '+error.message, 'error'); return; }
+    invoiceId = data.id;
+  } else {
+    const { error } = await sb.from('invoices').update(header).eq('id', invoiceId);
+    if(error){ toast('Error: '+error.message, 'error'); return; }
+    await sb.from('invoice_items').delete().eq('invoice_id', invoiceId);
+  }
+
+  const items = state.currentInvoiceItems.map((it, i) => {
+    const c = calcLineItem(it);
+    return {
+      invoice_id: invoiceId, item_type: it.kind, description: it.description || (it.kind==='exam'?'Eye Examination':'Item'),
+      inventory_id: it.kind==='inventory' ? (it.inventory_id||null) : null, quantity: it.kind==='inventory' ? (it.quantity||1) : 1,
+      total_payable: c.total_payable, discount_internal_value: it.discount_value||0, discount_internal_type: it.discount_type||'rs',
+      unit_price: c.unit_price, discount_rs: c.discount_rs, vat_rate: c.vat_rate, vat_amount: c.vat_amount, line_total: c.line_total, sort_order: i
+    };
+  });
+  const { error: itemErr } = await sb.from('invoice_items').insert(items);
+  if(itemErr){ toast('Document saved but rows failed: '+itemErr.message, 'error'); }
+
+  // Deduct stock only when a brand-new Order is created (not on quotations, and not on later edits)
+  if(isNew && document_type==='order'){
+    for(const it of state.currentInvoiceItems){
+      if(it.kind==='inventory' && it.inventory_id){
+        await sb.rpc('adjust_inventory_stock', { p_id: it.inventory_id, p_qty: it.quantity||1 });
+      }
+    }
+    await loadInventory();
+  }
+
+  if(isNew && document_type==='order' && header.appointment_id){ await setAppointmentStatus(header.appointment_id, 'invoiced'); }
+
+  toast('Document saved'); closeModal('modal-invoice');
+  await Promise.all([loadInvoices(), loadAppointments()]);
+  renderInvoices();
+}
+
+function renderInvoices(){
+  const q = ($('invoice-search').value||'').toLowerCase();
+  const from = $('invoice-date-from').value, to = $('invoice-date-to').value;
+  const typeF = $('invoice-type-filter').value;
+  const outstandingOnly = $('invoice-outstanding-only').checked;
+  const rows = state.invoices.filter(inv => {
+    const matchQ = !q || (inv.client_name||'').toLowerCase().includes(q) || (inv.invoice_number||'').includes(q) || (inv.order_number||'').toLowerCase().includes(q);
+    const matchFrom = !from || inv.invoice_date >= from;
+    const matchTo = !to || inv.invoice_date <= to;
+    const matchType = !typeF || inv.document_type === typeF;
+    const matchOutstanding = !outstandingOnly || (inv.outstanding||0) > 0;
+    return matchQ && matchFrom && matchTo && matchType && matchOutstanding;
+  });
+  const tbody = $('invoice-tbody');
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><h3>No documents found</h3></div></td></tr>'; return; }
+  tbody.innerHTML = rows.map(inv => {
+    let actions = `<button class="btn btn-outline btn-sm" onclick="printInvoice(${inv.id})">Print</button>`;
+    if(!inv.delivered) actions += `<button class="btn btn-outline btn-sm" onclick="editInvoiceDoc(${inv.id})">Edit</button>`;
+    if(inv.document_type==='quotation'){
+      actions += `<button class="btn btn-doc-order btn-sm" onclick="convertToOrder(${inv.id})">Convert to Order</button>`;
+    }
+    if(inv.document_type==='order'){
+      if((inv.outstanding||0) > 0){
+        actions += `<button class="btn btn-primary btn-sm" onclick="openPaymentTimeline(${inv.id})">Add Payment</button>`;
+      } else if(!inv.delivered){
+        actions += `<button class="btn btn-gold btn-sm" onclick="markDelivered(${inv.id})">Mark Delivered</button>`;
+      } else {
+        actions += `<button class="btn btn-doc-vat btn-sm" onclick="convertToVatInvoice(${inv.id})">Convert to VAT Invoice</button>`;
+      }
+    }
+    actions += `<button class="btn btn-outline btn-sm" onclick="openPaymentTimeline(${inv.id})">Payments</button>`;
+    if(!inv.delivered) actions += `<button class="btn btn-danger btn-sm" onclick="deleteInvoice(${inv.id})">Delete</button>`;
+    return `<tr>
+      <td>${esc(inv.invoice_number)}</td>
+      <td>${esc(inv.order_number||'—')}</td>
+      <td><span class="badge ${inv.document_type}">${docTypeLabel(inv.document_type)}</span></td>
+      <td>${fmtDate(inv.invoice_date)}</td>
+      <td>${esc(inv.client_name)}</td>
+      <td>${fmtMoney(inv.grand_total)}</td>
+      <td>${(inv.outstanding||0) > 0 ? `<span class="outstanding-amt">${fmtMoney(inv.outstanding)}</span>` : '<span class="badge paid">Rs 0.00</span>'}</td>
+      <td><span class="badge ${inv.delivered?'delivered-yes':'delivered-no'}">${inv.delivered?'Yes':'No'}</span></td>
+      <td class="record-actions">${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function convertToOrder(id){
+  if(!confirm('Convert this quotation to an order? The invoice number stays the same.')) return;
+  const { error } = await sb.from('invoices').update({document_type:'order'}).eq('id', id).eq('document_type','quotation');
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Converted to Order'); await loadInvoices(); renderInvoices();
+}
+
+async function markDelivered(id){
+  if(!confirm('Mark this order as delivered? It will be locked and can no longer be edited.')) return;
+  const { error } = await sb.from('invoices').update({delivered:true, delivered_at:new Date().toISOString()}).eq('id', id);
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Marked as delivered'); await loadInvoices(); renderInvoices();
+}
+
+async function convertToVatInvoice(id){
+  if(!confirm('Convert this delivered order into a VAT Invoice? This is final.')) return;
+  const { error } = await sb.from('invoices').update({document_type:'vat_invoice'}).eq('id', id).eq('document_type','order');
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Converted to VAT Invoice'); await loadInvoices(); renderInvoices();
+}
+
+async function deleteInvoice(id){
+  if(!confirm('Delete this document? Its invoice number will be reused by the next new document.')) return;
+  const { error } = await sb.from('invoices').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Document deleted'); await loadInvoices(); renderInvoices();
+}
+
+async function printInvoice(id){
+  const { data: inv, error } = await sb.from('invoices').select('*').eq('id', id).single();
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  const { data: items } = await sb.from('invoice_items').select('*').eq('invoice_id', id).order('sort_order');
+  const rows = (items||[]).map(it => `<tr><td>${esc(it.description)}</td><td>${fmtMoney(it.unit_price)}</td><td>${fmtMoney(it.discount_rs)}</td><td>${it.vat_rate}%</td><td>${fmtMoney(it.vat_amount)}</td><td>${fmtMoney(it.line_total)}</td></tr>`).join('');
+
+  const grand = inv.grand_total||0, deposit = inv.deposit||0;
+  let paymentHtml = '';
+  if(grand>0 && deposit>=grand){
+    paymentHtml = `<div style="text-align:center"><span class="inv-paid-full">PAID IN FULL</span></div>`;
+  } else {
+    paymentHtml = `<div class="inv-paid-status">`;
+    if(deposit>0) paymentHtml += `Deposit (Rs): ${fmtMoney(deposit)}<br>`;
+    paymentHtml += `Outstanding (Rs): ${fmtMoney(Math.max(grand-deposit,0))}`;
+    paymentHtml += `</div>`;
+  }
+  const modeHtml = inv.mode_of_payment ? `<p style="text-align:center; font-size:11.5px; margin-top:6px">Mode of Payment: ${esc(inv.mode_of_payment)}</p>` : '';
+
+  $('print-area').className = 'size-a4';
+  $('print-area').innerHTML = `
+    <div class="inv-print-head">
+      <img src="logo.png" alt="logo">
+      <div class="company">EyePro Optical</div>
+      <div class="tagline">Pro Care, Pro Vision</div>
+      <div class="co-name">Adams Vision Ltd</div>
+      <div class="co-contact">5 253 12 02 | 5 807 81 94</div>
+      <div class="co-contact">BRN: C24212108 | VAT: 28299971</div>
+    </div>
+    <div class="inv-doc-title">${docTypeLabel(inv.document_type)}</div>
+    <div class="inv-line"><span class="field">Invoice Number: <strong>${esc(inv.invoice_number)}</strong></span><span class="field">Invoice Date: <strong>${fmtDate(inv.invoice_date)}</strong></span></div>
+    <div class="inv-line"><span class="field">Order Number: <span class="inv-blank">&nbsp;</span></span><span class="field">Order Date: <span class="inv-blank">&nbsp;</span></span></div>
+    <div class="inv-line"><span class="field">Client Name: <strong>${esc(inv.client_name)}</strong></span></div>
+    <table class="inv-table">
+      <thead><tr><th>Description</th><th>Unit Price (Rs)</th><th>Discount (Rs)</th><th>VAT %</th><th>VAT Amount (Rs)</th><th>Total (Rs)</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <table class="inv-summary">
+      <thead><tr><th>Sub-total (Rs)</th><th>Total VAT Amount (Rs)</th><th>Grand Total (Rs)</th></tr></thead>
+      <tbody><tr><td>${fmtMoney(inv.subtotal)}</td><td>${fmtMoney(inv.vat_amount)}</td><td>${fmtMoney(inv.grand_total)}</td></tr></tbody>
+    </table>
+    ${paymentHtml}
+    ${modeHtml}
+  `;
+  window.print();
+}
+
+/* ================= PAYMENT TIMELINE ================= */
+async function openPaymentTimeline(id){
+  state.currentPaymentInvoiceId = id;
+  showView('payment-timeline');
+  await loadPaymentTimeline();
+}
+
+async function loadPaymentTimeline(){
+  const id = state.currentPaymentInvoiceId;
+  const { data: inv, error } = await sb.from('invoices').select('*').eq('id', id).single();
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  state.currentPaymentInvoiceOutstanding = inv.outstanding || 0;
+  const { data: payments } = await sb.from('payments').select('*').eq('invoice_id', id).order('payment_date');
+  const outstandingNote = (inv.outstanding||0) > 0 ? `<span class="outstanding-amt">&#9888; Rs ${Number(inv.outstanding).toFixed(2)} outstanding</span>` : `<span class="badge paid">Fully Paid</span>`;
+  $('pt-subtitle').innerHTML = `${docTypeLabel(inv.document_type)} ${esc(inv.invoice_number)} — ${esc(inv.client_name)} &middot; ${outstandingNote}`;
+  const paid = (payments||[]).reduce((s,p)=>s+Number(p.amount),0) + Number(inv.deposit||0);
+  $('pt-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-number">${fmtMoney(inv.grand_total)}</div><div class="stat-label">Grand Total</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number">${fmtMoney(inv.deposit)}</div><div class="stat-label">Initial Deposit</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number">${fmtMoney(paid)}</div><div class="stat-label">Total Paid</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number" style="color:${inv.outstanding>0?'var(--danger)':'var(--navy)'}">${fmtMoney(inv.outstanding)}</div><div class="stat-label">Outstanding</div><div class="gold-bar"></div></div>
+  `;
+  $('pt-pay-date').value = new Date().toISOString().slice(0,10);
+  $('pt-pay-amount').value = ''; $('pt-pay-mode').value = '';
+  const disablePayment = (inv.outstanding||0) <= 0;
+  $('pt-pay-amount').disabled = disablePayment; $('pt-pay-mode').disabled = disablePayment;
+  $('pt-settle-btn').style.display = disablePayment ? 'none' : 'inline-flex';
+  $('pt-tbody').innerHTML = (payments||[]).length ? (payments||[]).map(p => `<tr><td>${fmtDate(p.payment_date)}</td><td>${fmtMoney(p.amount)}</td><td>${esc(p.mode_of_payment||'')}</td></tr>`).join('')
+    : '<tr><td colspan="3"><div class="empty-state"><h3>No payments recorded yet</h3></div></td></tr>';
+}
+
+function fillSettleInFull(){
+  const outstanding = state.currentPaymentInvoiceOutstanding || 0;
+  if(outstanding <= 0){ toast('Nothing outstanding on this document', 'error'); return; }
+  $('pt-pay-amount').value = outstanding;
+  toast('Amount filled — pick a mode of payment and click Add Payment to confirm');
+}
+
+async function submitPayment(){
+  const id = state.currentPaymentInvoiceId;
+  const amount = parseFloat($('pt-pay-amount').value)||0;
+  const date = $('pt-pay-date').value;
+  const mode = $('pt-pay-mode').value;
+  if(amount<=0){ toast('Enter a payment amount', 'error'); return; }
+  const { data, error } = await sb.rpc('record_payment', { p_invoice_id:id, p_amount:amount, p_date:date, p_mode:mode||null });
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Payment recorded');
+  await loadPaymentTimeline();
+  await loadInvoices();
+}
+
+/* ================= REPORTS / EXPENSES (optometrist only) ================= */
+async function loadReports(){
+  const from = $('rep-from').value, to = $('rep-to').value;
+  const { data, error } = await sb.rpc('get_dashboard_stats', { p_from: from, p_to: to });
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  const r = (data && data[0]) || { total_sales:0, total_expenses:0, profit:0, invoice_count:0 };
+  $('rep-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-number">${fmtMoney(r.total_sales)}</div><div class="stat-label">Total Sales</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number">${fmtMoney(r.total_expenses)}</div><div class="stat-label">Total Expenses</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number">${fmtMoney(r.profit)}</div><div class="stat-label">Profit</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number">${r.invoice_count}</div><div class="stat-label">Invoices Issued</div><div class="gold-bar"></div></div>
+  `;
+}
+
+async function loadExpenses(){
+  const { data, error } = await sb.from('expenses').select('*').order('expense_date', {ascending:false});
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  state.expenses = data || [];
+  const tbody = $('expense-tbody');
+  if(!state.expenses.length){ tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><h3>No expenses recorded</h3></div></td></tr>'; return; }
+  tbody.innerHTML = state.expenses.map(e => `
+    <tr><td>${fmtDate(e.expense_date)}</td><td>${esc(e.description)}</td><td>${esc(e.category)}</td><td>${fmtMoney(e.amount)}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteExpense(${e.id})">Delete</button></td></tr>`).join('');
+}
+
+function openExpenseModal(){
+  $('ex-date').value = new Date().toISOString().slice(0,10);
+  $('ex-category').value = ''; $('ex-description').value = ''; $('ex-amount').value = '';
+  openModalEl('modal-expense');
+}
+
+async function saveExpense(){
+  const payload = { expense_date: $('ex-date').value, category: $('ex-category').value.trim(), description: $('ex-description').value.trim(), amount: parseFloat($('ex-amount').value)||0, created_by: state.user.id };
+  const { error } = await sb.from('expenses').insert(payload);
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Expense saved'); closeModal('modal-expense'); await loadExpenses(); loadReports();
+}
+
+async function deleteExpense(id){
+  if(!confirm('Delete this expense?')) return;
+  const { error } = await sb.from('expenses').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  await loadExpenses(); loadReports();
+}
+
+/* ================= DASHBOARD ================= */
+async function renderDashboard(){
+  $('dash-date').textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  const today = new Date().toISOString().slice(0,10);
+  const todays = state.appointments.filter(a => a.appt_date === today && a.status !== 'cancelled');
+  const outstandingDocs = state.invoices.filter(i => (i.outstanding||0) > 0).sort((a,b)=>b.outstanding-a.outstanding);
+  const totalOutstanding = outstandingDocs.reduce((s,i)=>s+Number(i.outstanding||0),0);
+  let statsHtml = `
+    <div class="stat-card"><div class="stat-number">${todays.length}</div><div class="stat-label">Today's Appointments</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number">${state.patients.length}</div><div class="stat-label">Total Patients</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number">${state.inventory.reduce((s,i)=>s+i.quantity,0)}</div><div class="stat-label">Items In Stock</div><div class="gold-bar"></div></div>
+    <div class="stat-card"><div class="stat-number" style="color:${totalOutstanding>0?'var(--danger)':'var(--navy)'}">${fmtMoney(totalOutstanding)}</div><div class="stat-label">Total Outstanding</div><div class="gold-bar"></div></div>
+  `;
+  if(isOptometrist()){
+    const { data } = await sb.rpc('get_dashboard_stats', { p_from: new Date(Date.now()-30*86400000).toISOString().slice(0,10), p_to: today });
+    const r = (data && data[0]) || {total_sales:0};
+    statsHtml += `<div class="stat-card"><div class="stat-number">${fmtMoney(r.total_sales)}</div><div class="stat-label">Sales (30 days)</div><div class="gold-bar"></div></div>`;
+  }
+  $('dash-stats').innerHTML = statsHtml;
+  const outCard = $('dash-outstanding-card');
+  if(outstandingDocs.length){
+    outCard.style.display = 'block';
+    $('dash-outstanding-tbody').innerHTML = outstandingDocs.slice(0,10).map(inv => `
+      <tr><td>${esc(inv.invoice_number)}</td><td><span class="badge ${inv.document_type}">${docTypeLabel(inv.document_type)}</span></td><td>${esc(inv.client_name)}</td>
+      <td><span class="outstanding-amt">${fmtMoney(inv.outstanding)}</span></td>
+      <td><button class="btn btn-settle btn-sm" onclick="openPaymentTimeline(${inv.id})">Clear</button></td></tr>`).join('');
+  } else {
+    outCard.style.display = 'none';
+  }
+  $('dash-today-appts').innerHTML = todays.length ? todays.map(a => `
+    <tr><td>${esc(a.time_slot)}</td><td>${a.patients?esc(a.patients.first_name+' '+a.patients.surname):'—'}</td><td>${esc(a.purpose_of_visit)}</td><td><span class="badge ${a.status}">${a.status.replace('_',' ')}</span></td></tr>
+  `).join('') : '<tr><td colspan="4"><div class="empty-state"><h3>No appointments today</h3></div></td></tr>';
+}
+
+/* ================= INIT ================= */
+(async function init(){
+  populatePatientSelects();
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ await afterLogin(); }
+})();
+</script>
+</body>
+</html>
