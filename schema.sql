@@ -71,8 +71,15 @@ create table if not exists public.patients (
 
 alter table public.patients enable row level security;
 
-create policy "patients_all_authenticated" on public.patients
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "patients_select_authenticated" on public.patients
+  for select using (auth.role() = 'authenticated');
+create policy "patients_insert_authenticated" on public.patients
+  for insert with check (auth.role() = 'authenticated');
+create policy "patients_update_authenticated" on public.patients
+  for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+-- only the optometrist may delete a patient (it also deletes their exam history)
+create policy "patients_delete_optometrist" on public.patients
+  for delete using (public.get_my_role() = 'optometrist');
 
 -- Auto patient code PRxxxx
 create or replace function public.set_patient_code()
@@ -142,8 +149,8 @@ create table if not exists public.eye_exams (
 
 alter table public.eye_exams enable row level security;
 
-create policy "eye_exams_select_all" on public.eye_exams
-  for select using (auth.role() = 'authenticated');
+create policy "eye_exams_select_optometrist" on public.eye_exams
+  for select using (public.get_my_role() = 'optometrist');
 
 create policy "eye_exams_write_optometrist_only" on public.eye_exams
   for insert with check (public.get_my_role() = 'optometrist');
@@ -168,8 +175,8 @@ create index if not exists exam_records_patient_idx on public.exam_records (pati
 
 alter table public.exam_records enable row level security;
 
-create policy "exam_records_select_all" on public.exam_records
-  for select using (auth.role() = 'authenticated');
+create policy "exam_records_select_optometrist" on public.exam_records
+  for select using (public.get_my_role() = 'optometrist');
 create policy "exam_records_insert_optometrist" on public.exam_records
   for insert with check (public.get_my_role() = 'optometrist');
 create policy "exam_records_delete_optometrist" on public.exam_records

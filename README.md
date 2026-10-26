@@ -8,8 +8,9 @@ Two roles, enforced in the database (not just hidden in the UI):
 
 | | Secretary | Optometrist |
 |---|---|---|
-| Appointments, Patients | Full access | Full access |
-| Eye Exam | View only | View + edit |
+| Appointments (filter by date range, sort ascending/descending) | Full access | Full access |
+| Patients (personal details only for the secretary) | Add / view / edit | Full access |
+| Eye Exam | No access | View + edit |
 | Inventory | View selling price & stock, sell items via invoicing | Full access incl. cost price, add/edit/delete items |
 | Invoicing | Full access | Full access |
 | Reports (Total Sales / Total Expenses / Profit) | No access | Full access |
@@ -26,6 +27,7 @@ Run these once, in order, in Supabase's SQL Editor (skip ones you've already run
 3. `migration_v3_inventory_lines.sql` — adds inventory-linked line items back into the invoice builder (see below). Safe to run even if you're not sure — it only adds columns/loosens a constraint, it won't touch existing data.
 
 4. `migration_v4_exam_records.sql` — the full Eye Exam form storage (`exam_records`) and the new patient-number format. Run it before using the Eye Exams tab.
+5. `migration_v5_roles.sql` — makes eye exam data readable by the optometrist only, and patient deletion optometrist-only.
 
 Then replace `index.html` with the version in this folder and redeploy (push to GitHub — Vercel picks it up automatically).
 
@@ -122,6 +124,6 @@ Outstanding amounts are surfaced in three places so nothing slips through:
 - **Eye Exams** tab lists every saved record (date/time, patient no., surname, name, date of birth). Filter by name, surname, patient number or date of birth. Click a record to open it in the form, read-only.
 - **Start Exam** (on a checked-in appointment), **New Exam** (Patients tab or Eye Exams tab) opens the full form: History (Personal details), Previous Rx, New Examination, and the Lens accordion (Spec Lens / Contact Lens).
 - **Every save is a new record** with its own date and time. **Edit** loads an old record and saves your changes as a *new* record for the same patient; the original is never overwritten, so you can compare a patient's eyes over the years (the date chips above the form jump between a patient's records).
-- **Delete** asks "Do you want to delete this?" first. Only the optometrist can create, edit or delete; the secretary can view and print.
+- **Delete** asks "Do you want to delete this?" first. Eye examination information is available to the optometrist only: the secretary has no Eye Exams tab and the database returns no exam data to them. The secretary works with patients' personal details (add, view, edit) and appointments; only the optometrist can delete a patient.
 - **Print** shows name, surname, patient number, record date and the Spec Lens and Contact Lens refraction tables only. Use the browser's "Save as PDF" in the print dialog for a PDF.
 - **Patient numbers** for new patients look like `EP-PN-001JA26` (EP-PN, a 3-digit number 001-999, 2-letter month, 2-digit year). The number is the smallest unused one for that month. Existing patients keep their old numbers.

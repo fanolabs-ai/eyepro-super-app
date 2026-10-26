@@ -299,7 +299,7 @@
     <button data-view="dashboard" onclick="showView('dashboard')"><span class="ic">&#9673;</span>Dashboard</button>
     <button data-view="appointments" onclick="showView('appointments')"><span class="ic">&#128197;</span>Appointments</button>
     <button data-view="patients" onclick="showView('patients')"><span class="ic">&#128100;</span>Patients</button>
-    <button data-view="exams" onclick="showView('exams')"><span class="ic">&#128065;</span>Eye Exams</button>
+    <button data-view="exams" data-role="optometrist" onclick="showView('exams')"><span class="ic">&#128065;</span>Eye Exams</button>
     <button data-view="inventory" onclick="showView('inventory')"><span class="ic">&#128230;</span>Inventory</button>
     <button data-view="invoicing" onclick="showView('invoicing')"><span class="ic">&#128179;</span>Invoicing<span class="nav-badge" id="nav-outstanding-badge" style="display:none"></span></button>
     <div class="nav-sep" data-role="optometrist"></div>
@@ -340,8 +340,12 @@
       </div>
       <div class="search-bar">
         <input type="text" class="search-input" id="appt-search" placeholder="Search name or phone" oninput="renderAppointments()">
-        <input type="date" id="appt-date-filter" onchange="renderAppointments()">
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('appt-date-filter').value='';renderAppointments()">Clear Date</button>
+        <div class="form-group narrow" style="min-width:130px"><label style="margin-bottom:0">From</label><input type="date" id="appt-date-from" onchange="renderAppointments()"></div>
+        <div class="form-group narrow" style="min-width:130px"><label style="margin-bottom:0">To</label><input type="date" id="appt-date-to" onchange="renderAppointments()"></div>
+        <div class="form-group narrow" style="min-width:150px"><label style="margin-bottom:0">Sort by date</label>
+          <select id="appt-sort" onchange="renderAppointments()"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="clearAppointmentFilters()">Clear Filters</button>
       </div>
       <div class="table-wrap"><table class="records-table">
         <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Contact</th><th>Purpose</th><th>Status</th><th>Actions</th></tr></thead>
@@ -352,9 +356,10 @@
     <!-- ===================== PATIENTS ===================== -->
     <section class="view" id="view-patients">
       <div class="page-header">
-        <div><div class="page-title">Patient Records</div><div class="page-subtitle">Demographics &amp; Clinical History</div></div>
+        <div><div class="page-title">Patient Records</div><div class="page-subtitle">Personal Details</div></div>
         <button class="btn btn-gold" onclick="openPatientModal()">+ New Patient</button>
       </div>
+      <p class="locked-note" id="patients-secretary-note" style="display:none; margin-bottom:10px">Eye examination information is available to the optometrist only. You have access to patients' personal details.</p>
       <div class="search-bar"><input type="text" class="search-input" id="patient-search" placeholder="Search name, code or phone" oninput="renderPatients()"></div>
       <div class="table-wrap"><table class="records-table">
         <thead><tr><th>Code</th><th>Name</th><th>DOB / Age</th><th>Contact</th><th>Occupation</th><th>Actions</th></tr></thead>
@@ -801,6 +806,7 @@ function applyRoleVisibility(){
   });
   $('inv-add-btn').style.display = isOptometrist() ? '' : 'none';
   $('inv-secretary-note').style.display = isOptometrist() ? 'none' : 'block';
+  $('patients-secretary-note').style.display = isOptometrist() ? 'none' : 'block';
   const theadRow = $('inv-thead-row');
   if(!isOptometrist()){
     theadRow.innerHTML = '<th>Local Code</th><th>Type</th><th>Description</th><th>Size/Colour</th><th>Selling Price</th><th>Stock</th><th>Sold</th><th>Actions</th>';
@@ -811,6 +817,9 @@ function applyRoleVisibility(){
 
 /* ---------------- VIEW SWITCHING ---------------- */
 function showView(name){
+  if((name==='exams' || name==='exam-form' || name==='reports') && !isOptometrist()){
+    toast('This section is available to the optometrist only', 'error'); name = 'dashboard';
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('nav.sidebar button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view===name));
   const view = $('view-' + name);
@@ -906,9 +915,9 @@ function renderPatients(){
       <td>${esc(p.occupation)}</td>
       <td class="record-actions">
         <button class="btn btn-outline btn-sm" onclick="openPatientModal(${p.id})">Edit</button>
-        ${isOptometrist() ? `<button class="btn btn-gold btn-sm" onclick="openExamForm(${p.id})">New Exam</button>` : ''}
+        ${isOptometrist() ? `<button class="btn btn-gold btn-sm" onclick="openExamForm(${p.id})">New Exam</button>
         <button class="btn btn-outline btn-sm" onclick="openPatientExams(${p.id})">Records</button>
-        <button class="btn btn-danger btn-sm" onclick="deletePatient(${p.id})">Delete</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePatient(${p.id})">Delete</button>` : ''}
       </td>
     </tr>`).join('');
 }
@@ -1043,14 +1052,31 @@ async function cancelAppointment(id){
   toast('Appointment cancelled');
 }
 
+function clearAppointmentFilters(){
+  $('appt-search').value=''; $('appt-date-from').value=''; $('appt-date-to').value=''; $('appt-sort').value='desc';
+  renderAppointments();
+}
+
+function timeSlotMinutes(t){
+  const m = String(t||'').trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])?/);
+  if(!m) return 0;
+  let h = parseInt(m[1]), min = parseInt(m[2]||'0');
+  if(m[3]){ const pm = m[3].toLowerCase()==='pm'; if(pm && h<12) h+=12; if(!pm && h===12) h=0; }
+  return h*60+min;
+}
+
 function renderAppointments(){
   const q = ($('appt-search').value||'').toLowerCase();
-  const dateFilter = $('appt-date-filter').value;
+  const from = $('appt-date-from').value, to = $('appt-date-to').value;
+  const dir = $('appt-sort').value === 'asc' ? 1 : -1;
   const rows = state.appointments.filter(a => {
     const pname = a.patients ? (a.patients.first_name+' '+a.patients.surname) : '';
     const matchQ = !q || pname.toLowerCase().includes(q) || (a.contact_number||'').includes(q);
-    const matchD = !dateFilter || a.appt_date === dateFilter;
+    const matchD = (!from || a.appt_date >= from) && (!to || a.appt_date <= to);
     return matchQ && matchD;
+  }).sort((a,b) => {
+    if(a.appt_date !== b.appt_date) return a.appt_date < b.appt_date ? -dir : dir;
+    return (timeSlotMinutes(a.time_slot) - timeSlotMinutes(b.time_slot)) * dir;
   });
   const tbody = $('appt-tbody');
   if(!rows.length){ tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><h3>No appointments found</h3></div></td></tr>'; return; }
@@ -1205,6 +1231,7 @@ function renderExamRecords(){
 }
 
 function openPatientExams(patientId){
+  if(!isOptometrist()) return;
   const p = state.patients.find(x => x.id === patientId);
   clearExamFilters();
   $('ex-f-code').value = p ? p.patient_code : '';
@@ -1231,7 +1258,7 @@ function pickExamPatient(id){ closeModal('modal-exam-patient'); openExamForm(id)
 /* ---- form view ---- */
 async function openExamForm(patientId, appointmentId, recordId, mode){
   mode = mode || (recordId ? 'view' : 'new');
-  if(mode !== 'view' && !isOptometrist()){ toast('Only the optometrist can create or edit examinations', 'error'); return; }
+  if(!isOptometrist()){ toast('Eye examination information is available to the optometrist only', 'error'); return; }
   const p = state.patients.find(x => x.id === patientId);
   if(!p){ toast('Patient not found', 'error'); return; }
   let rec = null;
@@ -1332,6 +1359,7 @@ function printRxTable(title, prefix, cols, d){
 }
 
 async function printExamRecord(id){
+  if(!isOptometrist()){ toast('Eye examination information is available to the optometrist only', 'error'); return; }
   let rec = (state.examRecords||[]).find(r => r.id === id);
   if(!rec){
     const { data, error } = await sb.from('exam_records').select('*, patients(first_name, surname, patient_code, dob, title)').eq('id', id).single();
