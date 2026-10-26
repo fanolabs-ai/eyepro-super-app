@@ -218,6 +218,39 @@
   .inv-paid-status { text-align: right; font-size: 13px; margin-top: 6px; }
   .inv-paid-full { text-align: center; font-family: 'Playfair Display', serif; font-weight: 700; color: var(--success); font-size: 16px; border: 2px solid var(--success); display: inline-block; padding: 4px 18px; border-radius: 6px; margin-top: 6px; }
 
+
+  /* ===== Eye exam form ===== */
+  .ex-form { max-width: 880px; }
+  .ex-form fieldset { background: var(--white); margin-bottom: 14px; }
+  .ex-form fieldset fieldset { background: var(--cream); }
+  .ex-sub { font-weight: 700; font-size: 12px; color: var(--navy); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ex-field { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+  .ex-field input[type=text], .ex-field select { width: 140px; padding: 5px 8px; font-size: 12px; }
+  .ex-field textarea { width: 100%; max-width: 520px; padding: 5px 8px; font-size: 12px; }
+  .ex-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .ex-scroll { overflow-x: auto; }
+  .ex-table { border-collapse: separate; border-spacing: 4px 3px; margin: 4px 0; }
+  .ex-table th { font-size: 10.5px; font-weight: 700; color: var(--navy); text-align: center; padding: 2px 4px; text-transform: uppercase; letter-spacing: 0.3px; border: none; white-space: nowrap; }
+  .ex-table td { padding: 0; text-align: center; border: none; }
+  .ex-table input { width: 58px; padding: 4px 3px; text-align: center; font-size: 11.5px; }
+  .ex-table.plain input { width: 72px; }
+  .ex-table textarea { width: 190px; padding: 4px 6px; font-size: 11.5px; text-align: center; resize: vertical; }
+  .acc-head { display: flex; justify-content: space-between; align-items: center; width: 100%; background: var(--navy); color: var(--white); border: none; padding: 9px 14px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; cursor: pointer; margin-top: 8px; }
+  .acc-head::after { content: '\25BE'; color: var(--gold); transition: transform .2s; }
+  .acc-head.open::after { transform: rotate(180deg); }
+  .acc-body { display: none; padding: 10px 6px 4px; }
+  .acc-head.open + .acc-body { display: block; }
+  .ex-patient-bar { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: center; font-size: 13px; padding: 12px 18px; margin-bottom: 14px; }
+  .ex-patient-bar .code { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--navy); font-size: 15px; }
+  .ex-mode { width: 100%; font-size: 11px; color: var(--gray-500); font-style: italic; }
+  .ex-history { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; font-size: 11px; }
+  .ex-chip { padding: 3px 10px; border-radius: 20px; border: 1.5px solid var(--navy); background: var(--white); color: var(--navy); font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .ex-chip.current { background: var(--gold); border-color: var(--gold); color: var(--white); }
+  .ex-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 30px; }
+  .px-head { display: flex; gap: 8px 28px; flex-wrap: wrap; font-size: 13px; margin: 6px 0 16px; }
+  .px-title { font-family: 'Playfair Display', serif; color: var(--navy); font-weight: 700; font-size: 14px; margin: 14px 0 4px; }
+  tr.clickable { cursor: pointer; }
+
   ::-webkit-scrollbar { height: 8px; width: 8px; }
   ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
 </style>
@@ -266,6 +299,7 @@
     <button data-view="dashboard" onclick="showView('dashboard')"><span class="ic">&#9673;</span>Dashboard</button>
     <button data-view="appointments" onclick="showView('appointments')"><span class="ic">&#128197;</span>Appointments</button>
     <button data-view="patients" onclick="showView('patients')"><span class="ic">&#128100;</span>Patients</button>
+    <button data-view="exams" onclick="showView('exams')"><span class="ic">&#128065;</span>Eye Exams</button>
     <button data-view="inventory" onclick="showView('inventory')"><span class="ic">&#128230;</span>Inventory</button>
     <button data-view="invoicing" onclick="showView('invoicing')"><span class="ic">&#128179;</span>Invoicing<span class="nav-badge" id="nav-outstanding-badge" style="display:none"></span></button>
     <div class="nav-sep" data-role="optometrist"></div>
@@ -326,6 +360,38 @@
         <thead><tr><th>Code</th><th>Name</th><th>DOB / Age</th><th>Contact</th><th>Occupation</th><th>Actions</th></tr></thead>
         <tbody id="patient-tbody"></tbody>
       </table></div>
+    </section>
+
+    <!-- ===================== EYE EXAM RECORDS ===================== -->
+    <section class="view" id="view-exams">
+      <div class="page-header">
+        <div><div class="page-title">Eye Examination Records</div><div class="page-subtitle">Every save is kept &mdash; track changes over the years</div></div>
+        <button class="btn btn-gold" data-role="optometrist" onclick="openExamPatientPicker()">+ New Exam</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="ex-f-name" placeholder="Name" oninput="renderExamRecords()" style="width:150px">
+        <input type="text" class="search-input" id="ex-f-surname" placeholder="Surname" oninput="renderExamRecords()" style="width:150px">
+        <input type="text" class="search-input" id="ex-f-code" placeholder="Patient No" oninput="renderExamRecords()" style="width:150px">
+        <div class="form-group narrow" style="min-width:140px"><label style="margin-bottom:0">Date of Birth</label><input type="date" id="ex-f-dob" onchange="renderExamRecords()"></div>
+        <button class="btn btn-outline btn-sm" onclick="clearExamFilters()">Clear</button>
+      </div>
+      <p class="locked-note" style="margin-bottom:8px">Click a record to open it in the examination form.</p>
+      <div class="table-wrap"><table class="records-table">
+        <thead><tr><th>Date &amp; Time</th><th>Patient No</th><th>Surname</th><th>Name</th><th>Date of Birth</th><th>Actions</th></tr></thead>
+        <tbody id="ex-tbody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ===================== EYE EXAM FORM ===================== -->
+    <section class="view" id="view-exam-form">
+      <div class="page-header">
+        <div><div class="page-title">Eye Examination</div><div class="page-subtitle">Patient Form</div></div>
+        <button class="btn btn-outline" onclick="showView('exams')">&larr; Back to Records</button>
+      </div>
+      <div class="card ex-patient-bar" id="ex-patient-bar"></div>
+      <div class="ex-history" id="ex-history"></div>
+      <div class="ex-form" id="exam-form"></div>
+      <div class="ex-actions" id="ex-actions"></div>
     </section>
 
     <!-- ===================== INVENTORY ===================== -->
@@ -518,44 +584,16 @@
   </div>
 </div>
 
-<!-- ============ MODAL: Eye Exam ============ -->
-<div class="modal-overlay" id="modal-exam">
-  <div class="modal" style="max-width:640px">
-    <div class="modal-title">Eye Examination</div>
-    <input type="hidden" id="e-id"><input type="hidden" id="e-patient-id"><input type="hidden" id="e-appointment-id">
-    <fieldset>
-      <legend>Refraction</legend>
-      <div class="form-row">
-        <div class="form-group narrow"><label>R &ndash; B.V.</label><input type="text" id="e-r-bv"></div>
-        <div class="form-group narrow"><label>R &ndash; C.V.</label><input type="text" id="e-r-cv"></div>
-        <div class="form-group narrow"><label>L &ndash; B.V.</label><input type="text" id="e-l-bv"></div>
-        <div class="form-group narrow"><label>L &ndash; C.V.</label><input type="text" id="e-l-cv"></div>
-      </div>
-    </fieldset>
-    <fieldset>
-      <legend>History</legend>
-      <div class="form-row">
-        <div class="form-group"><label>GH (General Health)</label><input type="text" id="e-gh"></div>
-        <div class="form-group"><label>FH (Family History)</label><input type="text" id="e-fh"></div>
-        <div class="form-group"><label>OH (Ocular History)</label><input type="text" id="e-oh"></div>
-      </div>
-    </fieldset>
-    <fieldset>
-      <legend>Findings &amp; Recommendation</legend>
-      <div class="form-row"><div class="form-group full"><label>Diagnosis</label><textarea id="e-diagnosis" rows="2"></textarea></div></div>
-      <div class="form-row"><div class="form-group full"><label>Recommendation</label><textarea id="e-recommendation" rows="2"></textarea></div></div>
-      <div class="form-row">
-        <div class="form-group"><label>Lens Type</label><input type="text" id="e-lens-type"></div>
-        <div class="form-group"><label>Lens Proposed</label><input type="text" id="e-lens-proposed"></div>
-      </div>
-      <div class="form-row"><div class="form-group full"><label>Contact Lens Proposed</label><input type="text" id="e-cl-proposed"></div></div>
-      <div class="form-row"><div class="form-group full"><label>Remarks</label><textarea id="e-remarks" rows="2"></textarea></div></div>
-    </fieldset>
-    <p class="locked-note" id="exam-readonly-note" style="display:none">You can view this exam, but only the optometrist can edit clinical findings.</p>
-    <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeModal('modal-exam')">Close</button>
-      <button class="btn btn-primary" id="exam-save-btn" onclick="saveExam()">Save Exam</button>
+<!-- ============ MODAL: Pick patient for new exam ============ -->
+<div class="modal-overlay" id="modal-exam-patient">
+  <div class="modal">
+    <div class="modal-title">New Eye Examination</div>
+    <label>Type patient name, number or phone</label>
+    <div class="ac-wrap">
+      <input type="text" id="ex-pick-search" style="width:100%" autocomplete="off" oninput="filterExamPatientPicker(this.value)">
+      <div class="autocomplete-results" id="ex-pick-results"></div>
     </div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal('modal-exam-patient')">Cancel</button></div>
   </div>
 </div>
 
@@ -782,6 +820,7 @@ function showView(name){
   if(name==='patients') renderPatients();
   if(name==='inventory') renderInventory();
   if(name==='invoicing') renderInvoices();
+  if(name==='exams') loadExamRecords().then(renderExamRecords);
   if(name==='reports'){
     if(!isOptometrist()){ toast('Reports are only available to the optometrist', 'error'); showView('dashboard'); return; }
     const today = new Date().toISOString().slice(0,10);
@@ -867,7 +906,8 @@ function renderPatients(){
       <td>${esc(p.occupation)}</td>
       <td class="record-actions">
         <button class="btn btn-outline btn-sm" onclick="openPatientModal(${p.id})">Edit</button>
-        <button class="btn btn-outline btn-sm" onclick="openExamModal(${p.id})">Eye Exam</button>
+        ${isOptometrist() ? `<button class="btn btn-gold btn-sm" onclick="openExamForm(${p.id})">New Exam</button>` : ''}
+        <button class="btn btn-outline btn-sm" onclick="openPatientExams(${p.id})">Records</button>
         <button class="btn btn-danger btn-sm" onclick="deletePatient(${p.id})">Delete</button>
       </td>
     </tr>`).join('');
@@ -1024,7 +1064,7 @@ function renderAppointments(){
       <td><span class="badge ${a.status}">${a.status.replace('_',' ')}</span></td>
       <td class="record-actions">
         ${a.status==='scheduled' ? `<button class="btn btn-outline btn-sm" onclick="setAppointmentStatus(${a.id},'checked_in')">Check In</button>` : ''}
-        ${a.status==='checked_in' ? `<button class="btn btn-outline btn-sm" onclick="openExamModal(${a.patient_id},${a.id})">Start Exam</button>` : ''}
+        ${a.status==='checked_in' && isOptometrist() ? `<button class="btn btn-outline btn-sm" onclick="openExamForm(${a.patient_id},${a.id})">Start Exam</button>` : ''}
         ${a.status==='exam_done' ? `<button class="btn btn-gold btn-sm" onclick="openInvoiceBuilder('order', ${a.patient_id}, ${a.id})">Invoice</button>` : ''}
         ${['scheduled','checked_in'].includes(a.status) ? `<button class="btn btn-danger btn-sm" onclick="cancelAppointment(${a.id})">Cancel</button>` : ''}
         <button class="btn btn-outline btn-sm" onclick="openAppointmentModal(${a.id})">Edit</button>
@@ -1032,52 +1072,285 @@ function renderAppointments(){
     </tr>`).join('');
 }
 
-/* ================= EYE EXAM ================= */
-async function openExamModal(patientId, appointmentId){
-  $('e-patient-id').value = patientId;
-  $('e-appointment-id').value = appointmentId || '';
-  let exam = null;
-  const { data } = await sb.from('eye_exams').select('*').eq('patient_id', patientId).order('created_at', {ascending:false}).limit(1);
-  if(data && data.length) exam = data[0];
-  $('e-id').value = exam ? exam.id : '';
-  $('e-r-bv').value = exam ? (exam.r_bv||'') : '';
-  $('e-r-cv').value = exam ? (exam.r_cv||'') : '';
-  $('e-l-bv').value = exam ? (exam.l_bv||'') : '';
-  $('e-l-cv').value = exam ? (exam.l_cv||'') : '';
-  $('e-gh').value = exam ? (exam.gh||'') : '';
-  $('e-fh').value = exam ? (exam.fh||'') : '';
-  $('e-oh').value = exam ? (exam.oh||'') : '';
-  $('e-diagnosis').value = exam ? (exam.diagnosis||'') : '';
-  $('e-recommendation').value = exam ? (exam.recommendation||'') : '';
-  $('e-lens-type').value = exam ? (exam.lens_type||'') : '';
-  $('e-lens-proposed').value = exam ? (exam.lens_proposed||'') : '';
-  $('e-cl-proposed').value = exam ? (exam.contact_lens_proposed||'') : '';
-  $('e-remarks').value = exam ? (exam.remarks||'') : '';
+/* ================= EYE EXAM (records & form) ================= */
+const COLS_PRX  = [['sph','Sph'],['cyl','Cyl'],['axis','Axis'],['add','Add'],['prism','Prism'],['base','Base']];
+const COLS_SPEC = [['sph','Sph'],['cyl','Cyl'],['axis','Axis'],['prism','Prism'],['base','Base'],['add','Add'],['intadd','Int Add'],['dva','D. VA'],['nva','N. VA']];
+const COLS_CL   = [['sph','Sph'],['cyl','Cyl'],['axis','Axis'],['add','Add'],['bc','B.C.'],['dia','Dia.'],['tint','Tint']];
+const COLS_CLE  = [['centration','Centration'],['movement','Movement'],['comfort','Comfort'],['fit','Fit'],['va','V.A.']];
 
-  const fields = ['e-r-bv','e-r-cv','e-l-bv','e-l-cv','e-gh','e-fh','e-oh','e-diagnosis','e-recommendation','e-lens-type','e-lens-proposed','e-cl-proposed','e-remarks'];
-  fields.forEach(f => $(f).disabled = !isOptometrist());
-  $('exam-save-btn').style.display = isOptometrist() ? '' : 'none';
-  $('exam-readonly-note').style.display = isOptometrist() ? 'none' : 'block';
-  openModalEl('modal-exam');
+let examState = { patientId:null, appointmentId:null, recordId:null, mode:'view', recordedAt:null };
+
+function fmtDateTime(ts){
+  return ts ? new Date(ts).toLocaleString('en-GB', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
 }
 
-async function saveExam(){
-  if(!isOptometrist()){ toast('Only the optometrist can save exam findings', 'error'); return; }
-  const patient_id = parseInt($('e-patient-id').value);
-  const appointment_id = $('e-appointment-id').value ? parseInt($('e-appointment-id').value) : null;
-  const payload = {
-    patient_id, appointment_id,
-    r_bv: $('e-r-bv').value, r_cv: $('e-r-cv').value, l_bv: $('e-l-bv').value, l_cv: $('e-l-cv').value,
-    gh: $('e-gh').value, fh: $('e-fh').value, oh: $('e-oh').value,
-    diagnosis: $('e-diagnosis').value, recommendation: $('e-recommendation').value,
-    lens_type: $('e-lens-type').value, lens_proposed: $('e-lens-proposed').value,
-    contact_lens_proposed: $('e-cl-proposed').value, remarks: $('e-remarks').value,
-    optometrist_id: state.user.id
-  };
-  const { error } = await sb.from('eye_exams').insert(payload);
+function exField(label, key, ta){
+  return `<div class="ex-field"><label>${label}</label>${ta ? `<textarea data-k="${key}" rows="2"></textarea>` : `<input type="text" data-k="${key}">`}</div>`;
+}
+function exSelect(label, key, opts){
+  return `<div class="ex-field"><label>${label}</label><select data-k="${key}"><option value=""></option>${opts.map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+}
+function rxTable(prefix, cols){
+  return `<div class="ex-scroll"><table class="ex-table"><thead><tr><th></th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead><tbody>` +
+    ['R','L'].map(side => `<tr><th>${side}</th>${cols.map(c=>`<td><input type="text" data-k="${prefix}_${side}_${c[0]}"></td>`).join('')}</tr>`).join('') +
+    `</tbody></table></div>`;
+}
+function vaTable(prefix){
+  return `<table class="ex-table plain"><thead><tr><th>R</th><th>L</th><th>BE</th></tr></thead><tbody><tr>${['R','L','BE'].map(k=>`<td><input type="text" data-k="${prefix}_${k}"></td>`).join('')}</tr></tbody></table>`;
+}
+
+function buildExamForm(){
+  $('exam-form').innerHTML = `
+  <fieldset><legend>History</legend>
+    <fieldset><legend>Personal details</legend>
+      ${exField('Purpose of visit','purpose',true)}
+      <div class="ex-row">${exField('GH','gh')}${exField('OH','oh')}${exField('FH','fh')}</div>
+    </fieldset>
+  </fieldset>
+
+  <fieldset><legend>Previous Rx</legend>
+    ${exSelect('Type','prx_type',['Distant','Near','Bifocal','Multifocal','Intermediate','C.L.'])}
+    ${rxTable('prx', COLS_PRX)}
+  </fieldset>
+
+  <fieldset><legend>New Examination</legend>
+    <div class="ex-row">
+      <div><div class="ex-sub">Unaided Dist VA</div>${vaTable('udva')}</div>
+      <div><div class="ex-sub">Unaided Near VA</div>${vaTable('unva')}</div>
+    </div>
+    <div class="ex-row" style="margin-top:8px">${exField('C. V.','cv')}${exField('B. V.','bv')}</div>
+    <table class="ex-table plain" style="margin-top:6px"><thead><tr><th></th><th>R</th><th>L</th></tr></thead><tbody>
+      <tr><th>Ext Eye</th><td><textarea data-k="ext_R" rows="3"></textarea></td><td><textarea data-k="ext_L" rows="3"></textarea></td></tr>
+      <tr><th>Int Eye</th><td><textarea data-k="int_R" rows="3"></textarea></td><td><textarea data-k="int_L" rows="3"></textarea></td></tr>
+    </tbody></table>
+    <div class="ex-sub">IOP</div>
+    <div class="ex-row">${exField('R','iop_R')}${exField('L','iop_L')}</div>
+  </fieldset>
+
+  <fieldset><legend>Lens</legend>
+    <button type="button" class="acc-head open" id="acc-spec" onclick="this.classList.toggle('open')">Spec Lens</button>
+    <div class="acc-body">
+      <div class="ex-sub">Refraction</div>
+      ${rxTable('spec', COLS_SPEC)}
+      ${exField('Lens Proposed','spec_lens_proposed',true)}
+      ${exField('Recommendation','spec_recommendation',true)}
+      ${exField('Remarks','spec_remarks',true)}
+      ${exField('Diagnosis','spec_diagnosis',true)}
+    </div>
+    <button type="button" class="acc-head" id="acc-cl" onclick="this.classList.toggle('open')">Contact Lens</button>
+    <div class="acc-body">
+      <div class="ex-sub">Contact Lens Refraction</div>
+      ${rxTable('cl', COLS_CL)}
+      ${exSelect('Contact lens proposed','cl_proposed_type',['Daily','Monthly','Multifocal','Coloured'])}
+      <div class="ex-sub">Contact Lens Evaluation</div>
+      ${rxTable('cle', COLS_CLE)}
+      ${exField('Lens Proposed','cl_lens_proposed',true)}
+      ${exField('Recommendation','cl_recommendation',true)}
+      ${exField('Remarks','cl_remarks',true)}
+      ${exField('Diagnosis','cl_diagnosis',true)}
+    </div>
+  </fieldset>`;
+}
+
+function collectExamData(){
+  const d = {};
+  document.querySelectorAll('#exam-form [data-k]').forEach(el => { const v = el.value.trim(); if(v) d[el.dataset.k] = v; });
+  return d;
+}
+function populateExamForm(d){
+  document.querySelectorAll('#exam-form [data-k]').forEach(el => { el.value = d[el.dataset.k] || ''; });
+  const keys = Object.keys(d);
+  const hasCL = keys.some(k => k.startsWith('cl'));
+  const hasSpec = keys.some(k => k.startsWith('spec'));
+  $('acc-spec').classList.toggle('open', hasSpec || !hasCL);
+  $('acc-cl').classList.toggle('open', hasCL);
+}
+function setExamEditable(on){
+  document.querySelectorAll('#exam-form [data-k]').forEach(el => el.disabled = !on);
+}
+
+/* ---- records list ---- */
+async function loadExamRecords(){
+  const { data, error } = await sb.from('exam_records').select('*, patients(first_name, surname, patient_code, dob, title)').order('recorded_at', {ascending:false});
+  if(error){ toast('Error loading exam records: '+error.message, 'error'); return; }
+  state.examRecords = data || [];
+}
+
+function clearExamFilters(){
+  ['ex-f-name','ex-f-surname','ex-f-code','ex-f-dob'].forEach(id => $(id).value = '');
+  renderExamRecords();
+}
+
+function renderExamRecords(){
+  const fn = $('ex-f-name').value.trim().toLowerCase(), fs = $('ex-f-surname').value.trim().toLowerCase();
+  const fc = $('ex-f-code').value.trim().toLowerCase(), fd = $('ex-f-dob').value;
+  const rows = (state.examRecords||[]).filter(r => {
+    const p = r.patients || {};
+    return (!fn || (p.first_name||'').toLowerCase().includes(fn)) && (!fs || (p.surname||'').toLowerCase().includes(fs)) &&
+           (!fc || (p.patient_code||'').toLowerCase().includes(fc)) && (!fd || p.dob === fd);
+  });
+  const tbody = $('ex-tbody');
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No examination records found</h3></div></td></tr>'; return; }
+  tbody.innerHTML = rows.map(r => {
+    const p = r.patients || {};
+    return `<tr class="clickable" onclick="openExamForm(${r.patient_id}, null, ${r.id}, 'view')">
+      <td>${fmtDateTime(r.recorded_at)}</td><td><span class="badge">${esc(p.patient_code)}</span></td>
+      <td>${esc(p.surname)}</td><td>${esc(p.first_name)}</td><td>${fmtDate(p.dob)}</td>
+      <td class="record-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-outline btn-sm" onclick="printExamRecord(${r.id})">Print</button>
+        ${isOptometrist() ? `<button class="btn btn-outline btn-sm" onclick="openExamForm(${r.patient_id}, null, ${r.id}, 'edit')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteExamRecord(${r.id})">Delete</button>` : ''}
+      </td></tr>`;
+  }).join('');
+}
+
+function openPatientExams(patientId){
+  const p = state.patients.find(x => x.id === patientId);
+  clearExamFilters();
+  $('ex-f-code').value = p ? p.patient_code : '';
+  showView('exams');
+}
+
+/* ---- patient picker for a new exam ---- */
+function openExamPatientPicker(){
+  $('ex-pick-search').value = ''; $('ex-pick-results').style.display = 'none';
+  openModalEl('modal-exam-patient');
+  setTimeout(()=>$('ex-pick-search').focus(), 50);
+}
+function filterExamPatientPicker(query){
+  const box = $('ex-pick-results');
+  const q = (query||'').trim().toLowerCase();
+  if(!q){ box.style.display='none'; return; }
+  const m = state.patients.filter(p => (p.first_name+' '+p.surname).toLowerCase().includes(q) || (p.patient_code||'').toLowerCase().includes(q) || (p.contact_number||'').includes(q)).slice(0,8);
+  box.innerHTML = m.length ? m.map(p => `<div class="ac-item" onmousedown="pickExamPatient(${p.id})"><strong>${esc(p.patient_code)}</strong> — ${esc(p.first_name)} ${esc(p.surname)}<span class="ac-sub">${esc(p.contact_number||'')}</span></div>`).join('')
+    : '<div class="ac-empty">No matching patient — register them under Patients or Appointments first.</div>';
+  box.style.display = 'block';
+}
+function pickExamPatient(id){ closeModal('modal-exam-patient'); openExamForm(id); }
+
+/* ---- form view ---- */
+async function openExamForm(patientId, appointmentId, recordId, mode){
+  mode = mode || (recordId ? 'view' : 'new');
+  if(mode !== 'view' && !isOptometrist()){ toast('Only the optometrist can create or edit examinations', 'error'); return; }
+  const p = state.patients.find(x => x.id === patientId);
+  if(!p){ toast('Patient not found', 'error'); return; }
+  let rec = null;
+  if(recordId){
+    const { data, error } = await sb.from('exam_records').select('*').eq('id', recordId).single();
+    if(error){ toast('Error: '+error.message, 'error'); return; }
+    rec = data;
+  }
+  examState = { patientId, appointmentId: rec ? rec.appointment_id : (appointmentId||null), recordId: recordId||null, mode, recordedAt: rec ? rec.recorded_at : null };
+  populateExamForm(rec ? rec.data : {});
+  if(!rec && appointmentId){
+    const a = state.appointments.find(x => x.id === appointmentId);
+    const el = document.querySelector('#exam-form [data-k="purpose"]');
+    if(a && a.purpose_of_visit && el) el.value = a.purpose_of_visit;
+  }
+  showView('exam-form');
+  document.querySelectorAll('nav.sidebar button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view==='exams'));
+  setExamEditable(mode !== 'view');
+  renderExamHeader(p); renderExamActions();
+  await renderExamHistory();
+}
+
+function renderExamHeader(p){
+  let note = '';
+  if(examState.mode==='new') note = 'New record — it will be saved with today\'s date and time.';
+  else if(examState.mode==='view') note = `Record of ${fmtDateTime(examState.recordedAt)}`;
+  else note = `Editing the record of ${fmtDateTime(examState.recordedAt)} — saving creates a NEW record; the original is kept unchanged.`;
+  $('ex-patient-bar').innerHTML = `
+    <span class="code">${esc(p.patient_code)}</span>
+    <span><strong>${esc(p.title||'')} ${esc(p.first_name)} ${esc(p.surname)}</strong></span>
+    <span>DOB: ${fmtDate(p.dob) || '—'}${p.age ? ' ('+p.age+' yrs)' : ''}</span>
+    <span>${esc(p.contact_number||'')}</span>
+    <span class="ex-mode">${note}</span>`;
+}
+
+function renderExamActions(){
+  const m = examState.mode;
+  let h = '';
+  if(m==='view'){
+    h += `<button class="btn btn-outline" onclick="printExamRecord(${examState.recordId})">Print</button>`;
+    if(isOptometrist()){
+      h += `<button class="btn btn-primary" onclick="startExamEdit()">Edit</button>
+            <button class="btn btn-danger" onclick="deleteExamRecord(${examState.recordId})">Delete</button>`;
+    }
+  } else {
+    h += `<button class="btn btn-primary" onclick="saveExamRecord()">${m==='edit' ? 'Save as New Record' : 'Save Record'}</button>
+          <button class="btn btn-outline" onclick="${examState.recordId ? 'cancelExamEdit()' : "showView('exams')"}">Cancel</button>`;
+  }
+  $('ex-actions').innerHTML = h;
+}
+
+function startExamEdit(){
+  examState.mode = 'edit';
+  setExamEditable(true);
+  renderExamHeader(state.patients.find(x => x.id === examState.patientId));
+  renderExamActions();
+}
+async function cancelExamEdit(){ await openExamForm(examState.patientId, null, examState.recordId, 'view'); }
+
+async function renderExamHistory(){
+  const { data } = await sb.from('exam_records').select('id, recorded_at').eq('patient_id', examState.patientId).order('recorded_at', {ascending:false});
+  const list = data || [];
+  $('ex-history').innerHTML = list.length
+    ? '<strong style="color:var(--navy)">Patient records:</strong>' + list.map(r => `<button type="button" class="ex-chip ${r.id===examState.recordId?'current':''}" onclick="openExamForm(${examState.patientId}, null, ${r.id}, 'view')">${fmtDateTime(r.recorded_at)}</button>`).join('')
+    : '<span class="locked-note">No saved records for this patient yet.</span>';
+}
+
+async function saveExamRecord(){
+  if(!isOptometrist()){ toast('Only the optometrist can save examinations', 'error'); return; }
+  const data = collectExamData();
+  if(!Object.keys(data).length){ toast('Fill in at least one field before saving', 'error'); return; }
+  const wasNew = examState.mode === 'new';
+  const { data: row, error } = await sb.from('exam_records').insert({
+    patient_id: examState.patientId, appointment_id: examState.appointmentId, data, optometrist_id: state.user.id
+  }).select().single();
   if(error){ toast('Error: '+error.message, 'error'); return; }
-  if(appointment_id) await setAppointmentStatus(appointment_id, 'exam_done');
-  toast('Exam saved'); closeModal('modal-exam'); await loadAppointments(); renderAppointments();
+  if(wasNew && examState.appointmentId){ await setAppointmentStatus(examState.appointmentId, 'exam_done'); }
+  toast(wasNew ? 'Examination record saved' : 'Saved as a new record');
+  await openExamForm(examState.patientId, null, row.id, 'view');
+}
+
+async function deleteExamRecord(id){
+  if(!isOptometrist()) return;
+  if(!confirm('Do you want to delete this?')) return;
+  const { error } = await sb.from('exam_records').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, 'error'); return; }
+  toast('Record deleted');
+  if(examState.recordId === id){ showView('exams'); }
+  else { await loadExamRecords(); renderExamRecords(); }
+}
+
+/* ---- print (name, surname, patient no, spec + contact lens tables only) ---- */
+function printRxTable(title, prefix, cols, d){
+  return `<div class="px-title">${title}</div>
+    <table class="inv-table"><thead><tr><th></th>${cols.map(c=>`<th style="text-align:center">${c[1]}</th>`).join('')}</tr></thead><tbody>` +
+    ['R','L'].map(side => `<tr><th style="background:var(--cream); color:var(--navy)">${side}</th>${cols.map(c=>`<td style="text-align:center">${esc(d[prefix+'_'+side+'_'+c[0]]||'')}</td>`).join('')}</tr>`).join('') +
+    `</tbody></table>`;
+}
+
+async function printExamRecord(id){
+  let rec = (state.examRecords||[]).find(r => r.id === id);
+  if(!rec){
+    const { data, error } = await sb.from('exam_records').select('*, patients(first_name, surname, patient_code, dob, title)').eq('id', id).single();
+    if(error){ toast('Error: '+error.message, 'error'); return; }
+    rec = data;
+  }
+  const p = rec.patients || state.patients.find(x => x.id === rec.patient_id) || {};
+  const d = rec.data || {};
+  $('print-area').className = 'size-a4';
+  $('print-area').innerHTML = `
+    <div class="px-head">
+      <span><strong>Name:</strong> ${esc(p.first_name)}</span>
+      <span><strong>Surname:</strong> ${esc(p.surname)}</span>
+      <span><strong>Patient No:</strong> ${esc(p.patient_code)}</span>
+      <span><strong>Date:</strong> ${fmtDateTime(rec.recorded_at)}</span>
+    </div>
+    ${printRxTable('Spec Lens &mdash; Refraction','spec',COLS_SPEC,d)}
+    ${printRxTable('Contact Lens &mdash; Refraction','cl',COLS_CL,d)}`;
+  window.print();
 }
 
 /* ================= INVENTORY ================= */
@@ -1677,6 +1950,7 @@ async function renderDashboard(){
 
 /* ================= INIT ================= */
 (async function init(){
+  buildExamForm();
   populatePatientSelects();
   const { data: { session } } = await sb.auth.getSession();
   if(session){ await afterLogin(); }

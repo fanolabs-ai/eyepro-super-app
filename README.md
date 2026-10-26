@@ -25,6 +25,8 @@ Run these once, in order, in Supabase's SQL Editor (skip ones you've already run
 2. `migration_v2_invoicing.sql` — the Quotation/Order/VAT Invoice engine. Skip if already applied.
 3. `migration_v3_inventory_lines.sql` — adds inventory-linked line items back into the invoice builder (see below). Safe to run even if you're not sure — it only adds columns/loosens a constraint, it won't touch existing data.
 
+4. `migration_v4_exam_records.sql` — the full Eye Exam form storage (`exam_records`) and the new patient-number format. Run it before using the Eye Exams tab.
+
 Then replace `index.html` with the version in this folder and redeploy (push to GitHub — Vercel picks it up automatically).
 
 ## 1. Create the Supabase project
@@ -114,3 +116,12 @@ Outstanding amounts are surfaced in three places so nothing slips through:
 - This is a single static HTML file by design (`index.html`) — no build tools, no server to maintain. `logo.png` is used exactly as provided (not modified) for the header and printed invoices.
 - Local codes: frames get `EP0001`, `EP0002`…, contact lenses `CL0001`…, accessories `AC0001`…, auto-assigned on save.
 - If you ever need a third role, or want the optometrist to manage users from inside the app instead of Supabase's Table Editor, that's a small addition — just ask.
+
+## Eye Examination form & records
+
+- **Eye Exams** tab lists every saved record (date/time, patient no., surname, name, date of birth). Filter by name, surname, patient number or date of birth. Click a record to open it in the form, read-only.
+- **Start Exam** (on a checked-in appointment), **New Exam** (Patients tab or Eye Exams tab) opens the full form: History (Personal details), Previous Rx, New Examination, and the Lens accordion (Spec Lens / Contact Lens).
+- **Every save is a new record** with its own date and time. **Edit** loads an old record and saves your changes as a *new* record for the same patient; the original is never overwritten, so you can compare a patient's eyes over the years (the date chips above the form jump between a patient's records).
+- **Delete** asks "Do you want to delete this?" first. Only the optometrist can create, edit or delete; the secretary can view and print.
+- **Print** shows name, surname, patient number, record date and the Spec Lens and Contact Lens refraction tables only. Use the browser's "Save as PDF" in the print dialog for a PDF.
+- **Patient numbers** for new patients look like `EP-PN-001JA26` (EP-PN, a 3-digit number 001-999, 2-letter month, 2-digit year). The number is the smallest unused one for that month. Existing patients keep their old numbers.
