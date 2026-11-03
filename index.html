@@ -1895,50 +1895,30 @@ async function deleteInvoice(id){
   toast('Document deleted'); await loadInvoices(); renderInvoices();
 }
 
+async function loadLogoDataUrl(){
+  try {
+    const blob = await (await fetch('logo.png')).blob();
+    return await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+  } catch(e){ return null; }
+}
+
+// Single print uses the same PDF layout as the bulk PDF, so every document looks identical.
 async function printInvoice(id){
-  const { data: inv, error } = await sb.from('invoices').select('*').eq('id', id).single();
-  if(error){ toast('Error: '+error.message, 'error'); return; }
-  const { data: items } = await sb.from('invoice_items').select('*').eq('invoice_id', id).order('sort_order');
-  const rows = (items||[]).map(it => `<tr><td>${esc(it.description)}</td><td>${fmtMoney(it.unit_price)}</td><td>${fmtMoney(it.discount_rs)}</td><td>${Number(it.vat_rate) ? it.vat_rate+'%' : '-'}</td><td>${fmtMoney(it.vat_amount)}</td><td>${fmtMoney(it.line_total)}</td></tr>`).join('');
-
-  const grand = inv.grand_total||0, deposit = inv.deposit||0;
-  let paymentHtml = '';
-  const outstandingNow = Number(inv.outstanding)||0;
-  if(grand>0 && outstandingNow<=0){
-    paymentHtml = `<div style="text-align:center"><span class="inv-paid-full">PAID IN FULL</span></div>`;
-  } else {
-    paymentHtml = `<div class="inv-paid-status">`;
-    if(deposit>0) paymentHtml += `Deposit (Rs): ${fmtMoney(deposit)}<br>`;
-    paymentHtml += `Outstanding (Rs): ${fmtMoney(outstandingNow)}`;
-    paymentHtml += `</div>`;
+  if(!window.jspdf || !window.jspdf.jsPDF){ toast('The PDF library did not load. Check your internet connection and reload.', 'error'); return; }
+  const win = window.open('', '_blank'); // opened straight from the click so the browser doesn't block it
+  try {
+    const { data: inv, error } = await sb.from('invoices').select('*').eq('id', id).single();
+    if(error) throw new Error(error.message);
+    const { data: items, error: iErr } = await sb.from('invoice_items').select('*').eq('invoice_id', id).order('sort_order');
+    if(iErr) throw new Error(iErr.message);
+    const doc = buildInvoicesPdf(window.jspdf.jsPDF, [inv], { [inv.id]: items || [] }, await loadLogoDataUrl());
+    const url = URL.createObjectURL(doc.output('blob'));
+    if(win){ win.location.href = url; }
+    else { doc.save(`EyePro_${docTypeLabel(inv.document_type).replace(' ','_')}_${inv.invoice_number}.pdf`); toast('Pop-up blocked, so the PDF was downloaded instead'); }
+  } catch(e){
+    if(win) win.close();
+    toast('Could not create the document: ' + e.message, 'error');
   }
-  const modeHtml = inv.mode_of_payment ? `<p style="text-align:center; font-size:11.5px; margin-top:6px">Mode of Payment: ${esc(inv.mode_of_payment)}</p>` : '';
-
-  $('print-area').className = 'size-a4';
-  $('print-area').innerHTML = `
-    <div class="inv-print-head">
-      <img src="logo.png" alt="logo">
-      <div class="company">EyePro Optical</div>
-      <div class="tagline">Pro Care, Pro Vision</div>
-      <div class="co-name">Adams Vision Ltd</div>
-      <div class="co-contact">5 253 12 02 | 5 807 81 94</div>
-      <div class="co-contact">BRN: C24212108 | VAT: 28299971</div>
-    </div>
-    <div class="inv-doc-title">${docTypeLabel(inv.document_type)}</div>
-    <div class="inv-line"><span class="field">Invoice Number: <strong>${esc(inv.invoice_number)}</strong></span><span class="field">Invoice Date: <strong>${fmtDate(inv.invoice_date)}</strong></span></div>
-    <div class="inv-line"><span class="field">Client Name: <strong>${esc(inv.client_name)}</strong></span></div>
-    <table class="inv-table">
-      <thead><tr><th>Description</th><th>Unit Price (Rs)</th><th>Discount (Rs)</th><th>VAT %</th><th>VAT Amount (Rs)</th><th>Total (Rs)</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <table class="inv-summary">
-      <thead><tr><th>Sub-total (Rs)</th><th>Total VAT Amount (Rs)</th><th>Grand Total (Rs)</th></tr></thead>
-      <tbody><tr><td>${fmtMoney(inv.subtotal)}</td><td>${fmtMoney(inv.vat_amount)}</td><td>${fmtMoney(inv.grand_total)}</td></tr></tbody>
-    </table>
-    ${paymentHtml}
-    ${modeHtml}
-  `;
-  window.print();
 }
 
 /* ================= BULK PDF ================= */
@@ -2085,11 +2065,7 @@ async function runBulkPdf(){
       if(error) throw new Error(error.message);
       (data||[]).forEach(it => { (itemsMap[it.invoice_id] = itemsMap[it.invoice_id] || []).push(it); });
     }
-    let logo = null;
-    try {
-      const blob = await (await fetch('logo.png')).blob();
-      logo = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
-    } catch(e){ logo = null; }
+    const logo = await loadLogoDataUrl();
 
     const doc = buildInvoicesPdf(window.jspdf.jsPDF, list, itemsMap, logo);
     if(handle){
